@@ -1,0 +1,6 @@
+out/*
+data/*
+__pycache__
+.envrc
+.mypy_cache
+.vscode
