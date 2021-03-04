@@ -9,17 +9,26 @@ import geopandas
 @click.argument('trackercode')
 @click.argument('year')
 @click.option('--avg', is_flag=True)
-def process(trackercode: str, year: str, avg: bool=True):
+@click.option('--by-week', is_flag=True)
+def process(trackercode: str, year: str, avg: bool=True, by_week: bool=False):
     df = load_df(trackercode, year)
-    small = df[['fieldnumber', 'latitude', 'longitude',
-                'datecollected', 'monthcollected']]
+
+    fields = ['fieldnumber', 'latitude', 'longitude', 'datecollected', 'monthcollected']
+    if by_week:
+        fields.append('weekcollected')
+    small = df[fields]
 
     if avg:
         # get average position of each animal fieldnumber over the month
-        avgs = small.groupby(['fieldnumber', 'monthcollected']).agg('mean')
+        time_field = 'weekcollected' if by_week else 'monthcollected'
+        avgs = small.groupby(['fieldnumber', time_field]).agg('mean')
 
-        # remove animal fieldnumber from index
-        avgs.reset_index(0, inplace=True)
+        if not by_week:
+            # remove animal fieldnumber from index
+            avgs.reset_index(0, inplace=True)
+        else:
+            avgs['monthcollected'] = avgs['monthcollected'].round().astype(int)
+            avgs.set_index('monthcollected', inplace=True)
     else:
         # just set month as the index
         avgs = small.set_index('monthcollected')
@@ -29,10 +38,11 @@ def process(trackercode: str, year: str, avg: bool=True):
 
     # for each month:
     for month in gdf.index.unique():
+        discrim = 'FULL'
         if avg:
-            fname = f'out/{trackercode}_{year}_{month}.geojson'
-        else:
-            fname = f'out/{trackercode}_{year}_{month}_FULL.geojson'
+            discrim = 'WEEK' if by_week else 'MONTH'
+
+        fname = f'out/{trackercode}_{year}_{month}_{discrim}.geojson'
 
         try:
             # get convex hull
@@ -53,7 +63,7 @@ def load_df(trackercode: str, year: str) -> geopandas.GeoSeries:
     df = pd.read_csv(f"data/{trackercode}_{year}.csv",
         parse_dates=['datelastmodified', 'datecollected']
     )
-    df['weekcollected'] = df['datecollected'].dt.week
+    df['weekcollected'] = df['datecollected'].dt.isocalendar().week
     return df
 
 

@@ -1,0 +1,30 @@
+body {
+  margin-right: 50px;
+}
+
+.mapgrid-4up {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  grid-column-gap: 5px;
+  grid-row-gap: 5px;
+
+  div {
+    position: relative;
+    max-height: 320px;
+  }
+}
+
+h3 {
+  position: absolute;
+  bottom: -10px;
+  z-index: 9999;
+}
+
+.link-holder {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: 1fr;
+  grid-column-gap: 20px;
+  grid-row-gap: 5px;
+} 
