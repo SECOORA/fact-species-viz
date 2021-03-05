@@ -1,11 +1,15 @@
 import json
-from typing import Callable, Dict, Union
+from typing import Callable, Dict, Optional, Union
 
 import click
+import numpy as np
 import pandas as pd
 import geopandas
-from shapely.geometry import box
+from shapely.geometry import asPolygon, box
+from shapely.geometry.base import BaseGeometry
 from shapely_geojson import FeatureCollection
+
+from hull import ConcaveHull
 
 
 # transform functions
@@ -87,49 +91,124 @@ agg_methods: Dict[str, Dict[str, Union[Callable, str]]] = {
     }
 }
 
+def summary_raw(gdf: geopandas.GeoDataFrame) -> BaseGeometry:
+    return FeatureCollection([gi for gi in gdf.geometry])
+
+def summary_convex(gdf: geopandas.GeoDataFrame) -> geopandas.GeoSeries:
+    hull = geopandas.GeoSeries([gdf.unary_union]).convex_hull
+    return hull
+
+def summary_concave(gdf: geopandas.GeoDataFrame) -> BaseGeometry:
+    month_df_points = np.stack(
+        (
+            gdf['longitude'].to_numpy(),
+            gdf['latitude'].to_numpy()
+        ),
+        axis=1
+    )
+    hullobj = ConcaveHull(month_df_points)
+    if hullobj is not None:
+        geom = asPolygon(hullobj.calculate())
+        buffered_geom = hullobj.buffer_in_meters(geom, 1000)
+        return buffered_geom
+
+    # couldn't do concave? convex is close.
+    print("WARN: could not do concave hull, returning convex")
+    return summary_convex(gdf)
+
+def summary_bbox(gdf: geopandas.GeoDataFrame) -> BaseGeometry:
+    return box(*gdf.total_bounds)
+
+def summary_rotated_bbox(gdf: geopandas.GeoDataFrame) -> BaseGeometry:
+    rbbox = gdf.unary_union.minimum_rotated_rectangle
+    return rbbox
+
+
+summary_methods = {
+    'raw': {
+        'callable': summary_raw,
+        'discrim': '',
+    },
+    'convex_hull': {
+        'callable': summary_convex,
+        'discrim': 'convex',
+    },
+    'concave_hull': {
+        'callable': summary_concave,
+        'discrim': 'concave'
+    },
+    'bbox': {
+        'callable': summary_bbox,
+        'discrim': 'bbox',
+    },
+    'rotated_bbox': {
+        'callable': summary_rotated_bbox,
+        'discrim': 'rbbox',
+    }
+
+}
+
 
 @click.command()
 @click.argument('trackercode')
 @click.argument('year')
 @click.argument('agg_method',
                 type=click.Choice(list(agg_methods.keys())))
-@click.option('--hull/--no-hull', default=True)
-def process(trackercode: str, year: str, agg_method: str, hull: bool) -> geopandas.GeoDataFrame:
+@click.argument('summary_method',
+                type=click.Choice(list(summary_methods.keys())))
+@click.option("--buffer", type=float)
+@click.option("--simplify", type=float)
+@click.option("--jitter", type=float)
+@click.option("--round-decimals", type=int)
+def process(trackercode: str, year: str, agg_method: str, summary_method: str, buffer: float, simplify: float, jitter: float, round_decimals: float) -> geopandas.GeoDataFrame:
     agg_callable: Callable[[pd.DataFrame], geopandas.GeoDataFrame] = agg_methods[agg_method]['callable']
     file_discriminant: str = agg_methods[agg_method]['discrim']
 
-    df = load_df(trackercode, year)
+    summary_callable: Callable[[geopandas.GeoDataFrame], BaseGeometry] = summary_methods[summary_method]['callable']
+    summary_discrim: str = summary_methods[summary_method]['discrim']
+
+    df = load_df(trackercode, year, jitter=jitter, round_decimals=round_decimals)
     gdf = agg_callable(df)
 
     # for each month:
     for month in gdf.index.unique():
-        fname = f'out/{trackercode}_{year}_{month}_{file_discriminant}.geojson'
+        file_parts = [fp for fp in [
+            trackercode,
+            str(year),
+            str(month),
+            file_discriminant,
+            summary_discrim
+        ] if fp]
+        fname = f'out/{"_".join(file_parts)}.geojson'
         month_df = gdf.loc[month]
+        print(fname)
 
-        if not hull:
-            fc = FeatureCollection([g for g in month_df['geometry']])
-            to_geojson(fc, fname + "nohull.geojson")
-        else:
-            try:
-                # get convex hull
-                convex_hull = get_convex_hull(month_df)
+        try:
+            summary = summary_callable(month_df)
 
-                # write to disk
-                print(trackercode, year, month)
-                to_geojson(convex_hull, fname)
-            except Exception as e:
-                print("EXCEPT", month, e)
+            if buffer:
+                summary = summary.buffer(buffer)
 
-                to_geojson(geopandas.GeoSeries(), fname)
+            if simplify:
+                summary = summary.simplify(simplify)
 
+            to_geojson(summary, fname)
+        except Exception as e:
+            print("EXCEPT", month, e)
+
+            to_geojson(geopandas.GeoSeries(), fname)
     return gdf
 
 
-def load_df(trackercode: str, year: str, trim: bool=True) -> geopandas.GeoSeries:
+def load_df(trackercode: str, year: str, trim: bool=True, jitter: Optional[float]=None, round_decimals: Optional[int]=None) -> geopandas.GeoSeries:
     df = pd.read_csv(f"data/{trackercode}_{year}.csv",
         parse_dates=['datelastmodified', 'datecollected']
     )
     df['weekcollected'] = df['datecollected'].dt.isocalendar().week
+
+    if round:
+        df['latitude'] = df['latitude'].round(round_decimals)
+        df['longitude'] = df['longitude'].round(round_decimals)
 
     if trim:
         fields = ['fieldnumber', 'latitude', 'longitude', 'datecollected', 'monthcollected', 'weekcollected']
