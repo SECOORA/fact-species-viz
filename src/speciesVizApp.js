@@ -34,11 +34,11 @@ function SpeciesVizApp(props) {
     </div>
 
     <MapGrid 
-    trackercode={trackerCode}
-    years={[2018]}
-    months={[month]}
-    variants={['FULL', 'MONTH', 'WEEK']}
-  /> 
+      trackercode={trackerCode}
+      years={[2018]}
+      months={[month]}
+      variants={['FULL', 'FULL_concave', 'FULL_convex', 'FULL_rbbox', 'ANIM_BOXES']}
+    /> 
   </div>
 }
 

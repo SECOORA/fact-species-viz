@@ -10,9 +10,20 @@ const normalStyle = {
   paint: {
     "fill-color": "#fcc87f",
     "fill-opacity": 0.5,
-    "fill-outline-color": "#f6a577",
+    "fill-outline-color": "#f6a577"
   },
 };
+
+const pointStyle = {
+  type: "circle",
+  paint: {
+    "circle-radius": ["interpolate", ["linear"], ["zoom"], 4, 3, 10, 10],
+    "circle-stroke-width": 2,
+    "circle-pitch-alignment": "map",
+    "circle-color": "#fcc87f",
+    "circle-stroke-color": "#f6a577"
+  }
+}
 
 function MapGrid(props) {
   const keys = useMemo(() => {
@@ -44,14 +55,20 @@ function MapGrid(props) {
               layerSources={{
                 url: `//localhost:7006/${k}.geojson`,
                 transform: (d) => {
-                  let data = d,
+                  let data;
+                  
+                  if (d.features[0].geometry.type === "MultiPoint") {
+                    data = {points: d.features[0]}
+                  } else {
+                    data = {range: d.features[0]}
+                  }
+
+                  let
                     catalog = [
                       {
                         key: k,
                         boundingBox: bbox(d.features[0]),
-                        data: {
-                          range: d.features[0],
-                        },
+                        data: data,
                       },
                     ];
 
@@ -59,8 +76,11 @@ function MapGrid(props) {
                     name: k,
                     styles: {
                       range: {
-                        normal: normalStyle,
+                        normal: normalStyle
                       },
+                      points: {
+                        normal: pointStyle
+                      }
                     },
                     catalog: catalog,
                   };

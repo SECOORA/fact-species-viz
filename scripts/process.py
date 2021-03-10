@@ -68,6 +68,27 @@ def buffered_points(df: pd.DataFrame) -> geopandas.GeoDataFrame:
     )
 
 
+def animal_boxes(df: pd.DataFrame) -> geopandas.GeoDataFrame:
+    """
+    For each animal, per month, make a bounding box, then union them up + buffer the whole thing.
+    """
+    def custom(pdf: pd.DataFrame):
+        if not isinstance(pdf.name, tuple):
+            return None
+
+        nodupes = pdf.drop_duplicates(subset=['latitude', 'longitude'])
+        poly = geopandas.points_from_xy(nodupes.longitude, nodupes.latitude).unary_union().convex_hull #.minimum_rotated_rectangle
+        return poly
+
+    grouped_df = df.drop(columns=['datecollected', 'weekcollected']).groupby(['fieldnumber', 'monthcollected'])
+    xformed = grouped_df.apply(custom)
+
+    new_df = pd.DataFrame(xformed, columns=['geom']).reset_index(0)
+    gdf = geopandas.GeoDataFrame(new_df, geometry=new_df['geom']).drop(columns=['geom'])
+
+    return gdf
+
+
 agg_methods: Dict[str, Dict[str, Union[Callable, str]]] = {
     'raw': {
         'callable': raw,
@@ -88,11 +109,16 @@ agg_methods: Dict[str, Dict[str, Union[Callable, str]]] = {
     'buffered_points': {
         'callable': buffered_points,
         'discrim': 'BUFFERED',
+    },
+    'animal_boxes': {
+        'callable': animal_boxes,
+        'discrim': 'ANIM_BOXES'
     }
 }
 
 def summary_raw(gdf: geopandas.GeoDataFrame) -> BaseGeometry:
-    return FeatureCollection([gi for gi in gdf.geometry])
+    #return FeatureCollection([gi for gi in gdf.geometry])
+    return geopandas.GeoSeries([gdf.unary_union])
 
 def summary_convex(gdf: geopandas.GeoDataFrame) -> geopandas.GeoSeries:
     hull = geopandas.GeoSeries([gdf.unary_union]).convex_hull
@@ -110,18 +136,18 @@ def summary_concave(gdf: geopandas.GeoDataFrame) -> BaseGeometry:
     if hullobj is not None:
         geom = asPolygon(hullobj.calculate())
         buffered_geom = hullobj.buffer_in_meters(geom, 1000)
-        return buffered_geom
+        return geopandas.GeoSeries([buffered_geom])
 
     # couldn't do concave? convex is close.
     print("WARN: could not do concave hull, returning convex")
     return summary_convex(gdf)
 
 def summary_bbox(gdf: geopandas.GeoDataFrame) -> BaseGeometry:
-    return box(*gdf.total_bounds)
+    return geopandas.GeoSeries([box(*gdf.total_bounds)])
 
 def summary_rotated_bbox(gdf: geopandas.GeoDataFrame) -> BaseGeometry:
     rbbox = gdf.unary_union.minimum_rotated_rectangle
-    return rbbox
+    return geopandas.GeoSeries([rbbox])
 
 
 summary_methods = {
@@ -206,7 +232,7 @@ def load_df(trackercode: str, year: str, trim: bool=True, jitter: Optional[float
     )
     df['weekcollected'] = df['datecollected'].dt.isocalendar().week
 
-    if round:
+    if round_decimals:
         df['latitude'] = df['latitude'].round(round_decimals)
         df['longitude'] = df['longitude'].round(round_decimals)
 
