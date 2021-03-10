@@ -27,19 +27,14 @@ const pointStyle = {
 
 function MapGrid(props) {
   const keys = useMemo(() => {
-    return props.months.flatMap((m) => {
-      return props.variants.map((v) => {
-        return `${props.trackercode}_2018_${m}_${v}`;
+    return props.years.flatMap((y) => {
+      return props.months.flatMap((m) => {
+        return props.variants.map((v) => {
+          return `${props.trackercode}_${y}_${m}_${v}`;
+        });
       });
     });
-  }, [props.months, props.variants, props.trackercode]);
-
-  // let keys = [
-  //   "BLKTP_2018_5",
-  //   "BLKTP_2018_5_FULL",
-  //   "BLKTP_2018_6",
-  //   "BLKTP_2018_6_FULL",
-  // ];
+  }, [props.months, props.variants, props.trackercode, props.years]);
 
   return (
     <div className="mapgrid-4up">
