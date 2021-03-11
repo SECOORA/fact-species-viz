@@ -34,6 +34,67 @@ function GLMap(props) {
     });
   }
 
+  /**
+   * Calculates a pixel number from the value if the value looks like a percentage (0 - 1).
+   * Uses viewportProp ('width' or 'height') to pull correct value from viewport.
+   * 
+   * @param {Number} val 
+   * @param {String} viewportProp 
+   */
+  const _calcPadding = (val, viewportProp) => {
+    if (val < 1 && !Number.isInteger(val)) {
+      return val * viewport[viewportProp];
+    }
+    return val;
+  }
+
+  const _viewportForExtents = (minLon, minLat, maxLon, maxLat, padding = 40) => {
+    // fixup padding object if any member contains a percentage
+    if (typeof padding === "object") {
+      padding = {
+        left:   _calcPadding(padding.left   || 40, 'width'),
+        right:  _calcPadding(padding.right  || 40, 'width'),
+        top:    _calcPadding(padding.top    || 40, 'height'),
+        bottom: _calcPadding(padding.bottom || 40, 'height'),
+      };
+    }
+
+    let newViewport = new WebMercatorViewport(viewport),
+      {longitude, latitude, zoom} = newViewport.fitBounds([
+        [minLon, minLat],
+        [maxLon, maxLat]
+      ], { padding: padding });
+
+    return {
+      latitude: latitude,
+      longitude: longitude,
+      zoom: zoom
+    }
+  }
+
+  const zoomToExtents = (extents, padding=props.zoomToPadding || {top: 40, left: 40, right: 40, bottom: 40}) => {
+    if (!extents) {
+      extents = allBBox;
+    }
+    if (!extents) {
+      return;
+    }
+
+    // if autorisize hasn't happened yet, 
+
+    let [minLon, minLat, maxLon, maxLat] = extents,
+      {latitude, longitude, zoom} = _viewportForExtents(minLon, minLat, maxLon, maxLat, padding);
+
+    setViewport({
+      ...viewport,
+      latitude: latitude,
+      longitude: longitude,
+      zoom: Math.min(zoom, props.maxZoom || 10),
+      transitionInterpolator: new LinearInterpolator(),
+      transitionDuration: 500
+    })
+  }
+
   useEffect(() => {
     if (!props.layerSources) {
       return;
@@ -87,12 +148,17 @@ function GLMap(props) {
         };
       });
 
+      const newAllBBox = bbox(allFeatures);
+
       setStyles(newStyles);
       setLayerData(data);
-      setAllBBox(bbox(allFeatures));
+      setAllBBox(newAllBBox);
+      zoomToExtents(newAllBBox);
     }).catch(e => {
       setNoData(true);
       setNoDataReason(e.toString());
+      setLayerData({});   // remove any previous layer data
+      setAllBBox(null);
     });
   }, [props.layerSources]);
 

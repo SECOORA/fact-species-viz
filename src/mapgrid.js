@@ -36,6 +36,7 @@ const DEFAULT_VARIANTS = [
 function MapGrid(props) {
   const mapHeight = props.mapHeight || 320;
 
+
   const keys = useMemo(() => {
     let variantPairs = DEFAULT_VARIANTS.map(variant => {
       return [
@@ -61,11 +62,16 @@ function MapGrid(props) {
               idField="key"
               mapStyle="mapbox://styles/mz4/ck6m8v8x9052n1iphvif4ilra"
               mapHeight={mapHeight}
-              // mapWidth={320}
+              mapWidth={mapHeight}
+              maxZoom={4}
               layerSources={{
                 url: `//localhost:7006/${keys[k]}.geojson`,
                 transform: (d) => {
                   let data;
+
+                  if (d.features.length === 0) {
+                    return null;
+                  }
 
                   if (d.features[0].geometry.type === "MultiPoint") {
                     data = { points: d.features[0] };

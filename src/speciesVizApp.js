@@ -8,7 +8,8 @@ import Chooser from "./chooser.js";
 const trackercodes = [
   'BLKTP',
   'FLKEYST',
-  'FSUGG'
+  'FSUGG',
+  'TQCS'
 ]
 
 const useQuery = () => {
@@ -26,12 +27,12 @@ function SpeciesVizApp(props) {
   const [year, setYear] = useState(query.get('year') || 2018);
 
   const buildQueryString = (newArgs) => {
-    let {newMonth = month, newYear = year, project = trackerCode} = newArgs;
+    let {newMonth = month, newYear = year, newProject = trackerCode} = newArgs;
 
     let vals = {
       month: newMonth,
       year: newYear,
-      project: project
+      project: newProject
     }
 
     let kvp = Object.entries(vals).map(kv => kv.join("=")).join("&");
@@ -85,7 +86,7 @@ function SpeciesVizApp(props) {
       }
     )
 
-    setProject(newProject);
+    setTrackerCode(newProject);
   }
 
   return (
