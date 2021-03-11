@@ -1,4 +1,4 @@
-FROM node:12 AS build
+FROM node:12.13 AS build
 RUN mkdir /tmp/build
 WORKDIR /tmp/build
 
