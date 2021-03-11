@@ -65,7 +65,7 @@ function MapGrid(props) {
               mapWidth={mapHeight}
               maxZoom={4}
               layerSources={{
-                url: `//localhost:7006/${keys[k]}.geojson`,
+                url: `${process.env.DATA_URL}/${keys[k]}.geojson`,
                 transform: (d) => {
                   let data;
 
