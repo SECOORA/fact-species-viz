@@ -9,7 +9,7 @@ build_staging:
   only:
     - master
   script:
-    - docker build -t registry.axiom/$CI_PROJECT_NAME --build-arg MAPBOX_TOKEN=$MAPBOX_TOKEN .
+    - docker build -t registry.axiom/$CI_PROJECT_NAME --build-arg MAPBOX_TOKEN=$MAPBOX_TOKEN --build-arg DATA_URL=$DATA_URL .
 
 push_staging:
   stage: push
