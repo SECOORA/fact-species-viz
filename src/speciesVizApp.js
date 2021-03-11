@@ -89,9 +89,9 @@ function SpeciesVizApp(props) {
   }
 
   return (
-    <div>
+    <div className="mr-24">
       <nav>
-        <h1 className="h1">
+        <h1 className="text-2xl ml-24 mb-2 pl-1">
           <a href="/">FACT RANGE TESTBED</a>
         </h1>
         <Chooser

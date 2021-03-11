@@ -3,9 +3,9 @@ import ReactDOM from "react-dom";
 import classNames from "classnames";
 
 function Chooser(props) {
-  return <div className="flex justify-center items-baseline flex-wrap mb-2">
+  return <div className="flex items-baseline flex-wrap mb-2">
     {props.label && (
-      <div className="mr-1 text-sm text-gray-600">
+      <div className="mr-1 text-sm text-gray-600 w-24 text-right">
         {props.label}:
       </div>
     )}

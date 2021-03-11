@@ -26,6 +26,8 @@ const pointStyle = {
 }
 
 function MapGrid(props) {
+  const mapHeight = props.mapHeight || 320;
+
   const keys = useMemo(() => {
     return props.years.flatMap((y) => {
       return props.months.flatMap((m) => {
@@ -40,42 +42,41 @@ function MapGrid(props) {
     <div className="mapgrid-4up">
       {keys.map((k) => {
         return (
-          <div key={k}>
-            <h3>{k}</h3>
+          <div className="relative" style={{ maxHeight: mapHeight }} key={k}>
+            <h3 className="absolute top-0 left-0 font-bold">{k}</h3>
             <GLMap
               idField="key"
               mapStyle="mapbox://styles/mz4/ck6m8v8x9052n1iphvif4ilra"
-              mapHeight={320}
-              mapWidth={320}
+              mapHeight={mapHeight}
+              // mapWidth={320}
               layerSources={{
                 url: `//localhost:7006/${k}.geojson`,
                 transform: (d) => {
                   let data;
-                  
+
                   if (d.features[0].geometry.type === "MultiPoint") {
-                    data = {points: d.features[0]}
+                    data = { points: d.features[0] };
                   } else {
-                    data = {range: d.features[0]}
+                    data = { range: d.features[0] };
                   }
 
-                  let
-                    catalog = [
-                      {
-                        key: k,
-                        boundingBox: bbox(d.features[0]),
-                        data: data,
-                      },
-                    ];
+                  let catalog = [
+                    {
+                      key: k,
+                      boundingBox: bbox(d.features[0]),
+                      data: data,
+                    },
+                  ];
 
                   return {
                     name: k,
                     styles: {
                       range: {
-                        normal: normalStyle
+                        normal: normalStyle,
                       },
                       points: {
-                        normal: pointStyle
-                      }
+                        normal: pointStyle,
+                      },
                     },
                     catalog: catalog,
                   };
