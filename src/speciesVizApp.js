@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import ReactDOM from "react-dom";
+import {useLocation, useHistory} from 'react-router';
 
 import MapGrid from "./mapgrid.js"
 import Chooser from "./chooser.js";
@@ -10,46 +11,137 @@ const trackercodes = [
   'FSUGG'
 ]
 
+const useQuery = () => {
+  return new URLSearchParams(useLocation().search);
+}
+
 function SpeciesVizApp(props) {
 
-  const [trackerCode, setTrackerCode] = useState('BLKTP');
-  const [month, setMonth] = useState(5);
-  const [year, setYear] = useState(2018);
+  let query = useQuery(),
+    location = useLocation(),
+    history = useHistory();
 
-  return <div>
+  const [trackerCode, setTrackerCode] = useState(query.get('project') || 'BLKTP');
+  const [month, setMonth] = useState(query.get('month') || 5);
+  const [year, setYear] = useState(query.get('year') || 2018);
 
-    <h1 className="h1">FACT RANGE TESTBED</h1>
-    <Chooser
-      items={trackercodes}
-      onClick={v => setTrackerCode(v)}
-      curVal={trackerCode}
-      label="Project"
-    />
+  const buildQueryString = (newArgs) => {
+    let {newMonth = month, newYear = year, project = trackerCode} = newArgs;
 
-    <Chooser
-      items={[2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020]}
-      onClick={v => setYear(v)}
-      curVal={year}
-      label="Year"
-    />
+    let vals = {
+      month: newMonth,
+      year: newYear,
+      project: project
+    }
 
-    <Chooser
-      items={[...Array(12).keys()].map(m => m+1)}
-      onClick={v => {
-        console.info("WE changing month", v)
-        setMonth(v)
-      }}
-      curVal={month}
-      label="Month"
-    />
+    let kvp = Object.entries(vals).map(kv => kv.join("=")).join("&");
+    let temp = `?${kvp}`;
 
-    <MapGrid 
-      trackercode={trackerCode}
-      years={[year]}
-      months={[month]}
-      variants={['FULL', 'FULL_concave', 'FULL_convex', 'FULL_rbbox', 'ANIM_BOXES']}
-    /> 
-  </div>
+    return temp;
+  }
+
+  // handle any url params controlling state
+  useEffect(() => {
+    if (query.has("project")) {
+      setTrackerCode(query.get("project"));
+    }
+
+    if (query.has("month")) {
+      setMonth(parseInt(query.get("month")));
+    }
+
+    if (query.has("year")) {
+      setYear(parseInt(query.get("year")));
+    }
+  }, [location])
+
+  const _setYear = (newYear) => {
+    history.push(
+      {
+        pathname: location.pathname,
+        search: buildQueryString({newYear: newYear})
+      }
+    )
+
+    setYear(newYear);
+  }
+
+  const _setMonth = (newMonth) => {
+    history.push(
+      {
+        pathname: location.pathname,
+        search: buildQueryString({newMonth: newMonth})
+      }
+    )
+
+    setMonth(newMonth);
+  }
+
+  const _setProject = (newProject) => {
+    history.push(
+      {
+        pathname: location.pathname,
+        search: buildQueryString({newProject: newProject})
+      }
+    )
+
+    setProject(newProject);
+  }
+
+  return (
+    <div>
+      <nav>
+        <h1 className="h1">
+          <a href="/">FACT RANGE TESTBED</a>
+        </h1>
+        <Chooser
+          items={trackercodes}
+          onClick={_setProject}
+          curVal={trackerCode}
+          label="Project"
+        />
+
+        <Chooser
+          items={[
+            2009,
+            2010,
+            2011,
+            2012,
+            2013,
+            2014,
+            2015,
+            2016,
+            2017,
+            2018,
+            2019,
+            2020,
+          ]}
+          onClick={_setYear}
+          curVal={year}
+          label="Year"
+        />
+
+        <Chooser
+          items={[...Array(12).keys()].map((m) => m + 1)}
+          onClick={_setMonth}
+          curVal={month}
+          label="Month"
+        />
+      </nav>
+      <MapGrid
+        trackercode={trackerCode}
+        years={[year]}
+        months={[month]}
+        variants={[
+          "FULL",
+          "FULL_concave",
+          "FULL_convex",
+          "FULL_rbbox",
+          "ANIM_BOXES",
+        ]}
+      />
+    </div>
+  );
 }
 
 export default SpeciesVizApp;
