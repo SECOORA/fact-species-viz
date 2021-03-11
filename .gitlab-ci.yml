@@ -27,7 +27,7 @@ deploy_staging:
   only:
     - master
   script:
-    - docker run --rm registry.axiom/ansible ap apps-stage $CI_PROJECT_NAME-staging --tags deploy
+    - docker run --rm registry.axiom/ansible ap apps-stage $CI_PROJECT_NAME --tags deploy
 
 stop_staging:
   stage: deploy
