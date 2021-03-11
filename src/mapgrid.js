@@ -25,22 +25,35 @@ const pointStyle = {
   }
 }
 
+const DEFAULT_VARIANTS = [
+  "FULL",
+  "FULL_concave",
+  "FULL_convex",
+  "FULL_rbbox",
+  "ANIM_BOXES",
+];
+
 function MapGrid(props) {
   const mapHeight = props.mapHeight || 320;
 
   const keys = useMemo(() => {
-    return props.years.flatMap((y) => {
-      return props.months.flatMap((m) => {
-        return props.variants.map((v) => {
-          return `${props.trackercode}_${y}_${m}_${v}`;
-        });
-      });
-    });
+    let variantPairs = DEFAULT_VARIANTS.map(variant => {
+      return [
+        variant,
+        props.years.flatMap((y) => {
+          return props.months.flatMap((m) => {
+            return `${props.trackercode}_${y}_${m}_${variant}`;
+          });
+        }),
+      ];
+    })
+
+    return Object.fromEntries(variantPairs);
   }, [props.months, props.variants, props.trackercode, props.years]);
 
   return (
     <div className="mapgrid-4up">
-      {keys.map((k) => {
+      {DEFAULT_VARIANTS.map((k) => {
         return (
           <div className="relative" style={{ maxHeight: mapHeight }} key={k}>
             <h3 className="absolute top-0 left-0 font-bold">{k}</h3>
@@ -50,7 +63,7 @@ function MapGrid(props) {
               mapHeight={mapHeight}
               // mapWidth={320}
               layerSources={{
-                url: `//localhost:7006/${k}.geojson`,
+                url: `//localhost:7006/${keys[k]}.geojson`,
                 transform: (d) => {
                   let data;
 
