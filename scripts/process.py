@@ -175,6 +175,28 @@ summary_methods = {
 }
 
 
+def build_filename(trackercode: str, year: Union[int, str], month: Union[int, str], *args, lookup_agg: Optional[str]=None, lookup_summary: Optional[str]=None, suffix: str="geojson"):
+    """
+    Makes an output filename.
+
+    Can optionally look up the agg/summary parts.
+    """
+    file_parts = [
+        trackercode,
+        str(year),
+        str(month),
+        *args
+    ]
+
+    if lookup_agg and lookup_agg in agg_methods:
+        file_parts.append(agg_methods[lookup_agg]['discrim'])
+
+    if lookup_summary and lookup_summary in summary_methods:
+        file_parts.append(summary_methods[lookup_summary]['discrim'])
+
+    return f'{"_".join((f for f in file_parts if f))}.{suffix}'
+
+
 @click.command()
 @click.argument('trackercode')
 @click.argument('year')
@@ -182,11 +204,12 @@ summary_methods = {
                 type=click.Choice(list(agg_methods.keys())))
 @click.argument('summary_method',
                 type=click.Choice(list(summary_methods.keys())))
+@click.option("--month", type=int)
 @click.option("--buffer", type=float)
 @click.option("--simplify", type=float)
 @click.option("--jitter", type=float)
 @click.option("--round-decimals", type=int)
-def process(trackercode: str, year: str, agg_method: str, summary_method: str, buffer: float, simplify: float, jitter: float, round_decimals: float) -> geopandas.GeoDataFrame:
+def process(trackercode: str, year: str, agg_method: str, summary_method: str, month: int, buffer: float, simplify: float, jitter: float, round_decimals: float) -> geopandas.GeoDataFrame:
     agg_callable: Callable[[pd.DataFrame], geopandas.GeoDataFrame] = agg_methods[agg_method]['callable']
     file_discriminant: str = agg_methods[agg_method]['discrim']
 
@@ -197,16 +220,20 @@ def process(trackercode: str, year: str, agg_method: str, summary_method: str, b
     gdf = agg_callable(df)
 
     # for each month:
-    for month in gdf.index.unique():
-        file_parts = [fp for fp in [
+    for imonth in gdf.index.unique():
+        if month and imonth != month:
+            continue
+
+        ffname = build_filename(
             trackercode,
-            str(year),
-            str(month),
+            year,
+            imonth,
             file_discriminant,
             summary_discrim
-        ] if fp]
-        fname = f'out/{"_".join(file_parts)}.geojson'
-        month_df = gdf.loc[month]
+        )
+
+        fname = f'out/{ffname}'
+        month_df = gdf.loc[imonth]
         print(fname)
 
         try:
@@ -220,26 +247,28 @@ def process(trackercode: str, year: str, agg_method: str, summary_method: str, b
 
             to_geojson(summary, fname)
         except Exception as e:
-            print("EXCEPT", month, e)
+            print("EXCEPT", imonth, e)
 
             to_geojson(geopandas.GeoSeries(), fname)
     return gdf
 
 
 def load_df(trackercode: str, year: str, trim: bool=True, jitter: Optional[float]=None, round_decimals: Optional[int]=None) -> geopandas.GeoSeries:
+    kwargs = {
+        'parse_dates': ['datelastmodified', 'datecollected']
+    } 
+    if trim:
+        kwargs['usecols'] = ['fieldnumber', 'latitude', 'longitude', 'datecollected', 'monthcollected']
+        kwargs['parse_dates'] = ['datecollected']
+
     df = pd.read_csv(f"data/{trackercode}_{year}.csv",
-        parse_dates=['datelastmodified', 'datecollected']
+        **kwargs
     )
     df['weekcollected'] = df['datecollected'].dt.isocalendar().week
 
     if round_decimals:
         df['latitude'] = df['latitude'].round(round_decimals)
         df['longitude'] = df['longitude'].round(round_decimals)
-
-    if trim:
-        fields = ['fieldnumber', 'latitude', 'longitude', 'datecollected', 'monthcollected', 'weekcollected']
-        small = df[fields]
-        return small
 
     return df
 
