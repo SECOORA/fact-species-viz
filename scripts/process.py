@@ -9,7 +9,11 @@ from shapely.geometry import asPolygon, box
 from shapely.geometry.base import BaseGeometry
 from shapely_geojson import FeatureCollection
 
-from hull import ConcaveHull
+# what is this?!?
+try:
+    from hull import ConcaveHull
+except ImportError:
+    from .hull import ConcaveHull
 
 
 # transform functions
@@ -249,7 +253,7 @@ def process(trackercode: str, year: str, agg_method: str, summary_method: str, m
         except Exception as e:
             print("EXCEPT", imonth, e)
 
-            to_geojson(geopandas.GeoSeries(), fname)
+            to_geojson(FeatureCollection([]), fname)
     return gdf
 
 
