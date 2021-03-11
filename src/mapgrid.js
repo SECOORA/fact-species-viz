@@ -56,7 +56,7 @@ function MapGrid(props) {
       {DEFAULT_VARIANTS.map((k) => {
         return (
           <div className="relative" style={{ maxHeight: mapHeight }} key={k}>
-            <h3 className="absolute top-0 left-0 font-bold">{k}</h3>
+            <h3 className="absolute top-0 left-0 font-bold z-50">{k}</h3>
             <GLMap
               idField="key"
               mapStyle="mapbox://styles/mz4/ck6m8v8x9052n1iphvif4ilra"

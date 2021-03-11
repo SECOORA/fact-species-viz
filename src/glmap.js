@@ -24,6 +24,8 @@ function GLMap(props) {
   const [styles, setStyles] = useState({});
   const [layerData, setLayerData] = useState({});
   const [allBBox, setAllBBox] = useState(null);
+  const [noData, setNoData] = useState(false);
+  const [noDataReason, setNoDataReason] = useState(null);
 
   const onAutoResize = (e) => {
     setViewport({
@@ -43,7 +45,17 @@ function GLMap(props) {
     d3.json(url).then(d => {
 
       let transformed = transform(d);
-      
+      if (transformed === null) {
+        setNoData(true);
+        setLayerData({});   // remove any previous layer data
+        setAllBBox(null);
+        return;
+      }
+
+      // unset nodata on successful load
+      setNoData(false);
+      setNoDataReason(null);
+
       // build sources from returned data and styles
       // extract and merge individual features
       let data = {},
@@ -78,6 +90,9 @@ function GLMap(props) {
       setStyles(newStyles);
       setLayerData(data);
       setAllBBox(bbox(allFeatures));
+    }).catch(e => {
+      setNoData(true);
+      setNoDataReason(e.toString());
     });
   }, [props.layerSources]);
 
@@ -121,13 +136,22 @@ function GLMap(props) {
                       id={layerName + "normal"}
                       {...styles[layerName].normal}
                     />
-
                   </Source>
                 );
               })}
             </ReactMapGL>
           )}
         </AutoSizer>
+        <div className="overlay-container absolute top-0 left-0 w-full h-full pointer-events-none">
+          {noData && (
+            <div className="w-full h-full bg-white opacity-50 flex place-content-center">
+              <div className="flex flex-col justify-center items-center">
+                <p className="text-4xl">NO DATA</p>
+                {noDataReason && <p>{noDataReason}</p>}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
