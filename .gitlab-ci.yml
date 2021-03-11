@@ -1,0 +1,48 @@
+stages:
+  - build
+  - push
+  - deploy
+  - cleanup
+
+build_staging:
+  stage: build
+  only:
+    - master
+  script:
+    - docker build -t registry.axiom/$CI_PROJECT_NAME --build-arg MAPBOX_TOKEN=$MAPBOX_TOKEN .
+
+push_staging:
+  stage: push
+  only:
+    - master
+  script:
+    - docker push registry.axiom/$CI_PROJECT_NAME
+
+deploy_staging:
+  stage: deploy
+  environment:
+    name: stage
+    url: http://stage-$CI_PROJECT_NAME.srv.axds.co
+    on_stop: stop_staging
+  only:
+    - master
+  script:
+    - docker run --rm registry.axiom/ansible ap apps-stage $CI_PROJECT_NAME-staging --tags deploy
+
+stop_staging:
+  stage: deploy
+  only:
+    - master
+  when: manual
+  environment:
+    name: stage
+    action: stop
+  script:
+    - docker run --rm registry.axiom/ansible ap apps-stage $CI_PROJECT_NAME --tags deploy -e fact_species_viz_state=stopped
+
+cleanup_staging:
+  stage: cleanup
+  only:
+    - master
+  script:
+    - docker rmi --no-prune registry.axiom/$CI_PROJECT_NAME
