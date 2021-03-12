@@ -53,7 +53,7 @@ function MapGrid(props) {
   }, [props.months, props.variants, props.trackercode, props.years]);
 
   return (
-    <div className="mapgrid-4up">
+    <div className="mapgrid">
       {DEFAULT_VARIANTS.map((k) => {
         return (
           <div className="relative" style={{ maxHeight: mapHeight }} key={k}>

@@ -90,7 +90,25 @@ function SpeciesVizApp(props) {
   }
 
   return (
-    <div className="mr-24">
+    <div className="mr-12">
+      <div className="absolute top-0 right-0 bg-gray-200 text-sm mr-2 p-2 border border-gray-100">
+        <h5 className="font-bold uppercase text-gray-500">Notes</h5>
+        <p>General data availability:</p>
+        <ul>
+          <li>
+            <strong>BLKTP:</strong> 2009-2020
+          </li>
+          <li>
+            <strong>FLKEYST:</strong> 2010, 2012, 2014-2019
+          </li>
+          <li>
+            <strong>FSUGG:</strong> 2010-2019
+          </li>
+          <li>
+            <strong>TQCS:</strong> 2009-2011
+          </li>
+        </ul>
+      </div>
       <nav>
         <h1 className="text-2xl ml-24 mb-2 pl-1">
           <a href="/">FACT RANGE TESTBED</a>
