@@ -15,7 +15,7 @@ dependencies:
   - boost-cpp=1.72.0=h9d3c048_4
   - bzip2=1.0.8=h7f98852_4
   - c-ares=1.17.1=h36c2ea0_0
-  - ca-certificates=2021.1.19=h06a4308_0
+  - ca-certificates=2021.4.13=h06a4308_1
   - cairo=1.16.0=h7979940_1007
   - certifi=2020.12.5=py39hf3d152e_1
   - cfitsio=3.470=hce51eda_7
@@ -84,7 +84,7 @@ dependencies:
   - ncurses=6.2=h58526e2_4
   - numpy=1.20.1=py39hdbf815f_0
   - openjpeg=2.4.0=hf7af979_0
-  - openssl=1.1.1j=h7f98852_0
+  - openssl=1.1.1k=h7f98852_0
   - pandas=1.2.2=py39hde0f152_0
   - parso=0.8.1=pyhd8ed1ab_0
   - pcre=8.44=he1b5a44_0
@@ -117,6 +117,7 @@ dependencies:
   - tiledb=2.2.4=hb9a9e87_0
   - tk=8.6.10=hed695b0_1
   - toml=0.10.2=pyhd8ed1ab_0
+  - tqdm=4.60.0=pyhd8ed1ab_0
   - traitlets=5.0.5=py_0
   - tzcode=2021a=h7f98852_0
   - tzdata=2021a=he74cb21_0
@@ -135,4 +136,24 @@ dependencies:
   - xz=5.2.5=h516909a_1
   - zlib=1.2.11=h516909a_1010
   - zstd=1.4.8=ha95c52a_1
+  - pip:
+    - chardet==4.0.0
+    - cycler==0.10.0
+    - descartes==1.1.0
+    - geohunter==0.1.3
+    - geojson==2.5.0
+    - geojsoncontour==0.4.0
+    - idna==2.10
+    - kiwisolver==1.3.1
+    - matplotlib==3.4.1
+    - patsy==0.5.1
+    - pillow==8.2.0
+    - pyparsing==2.4.7
+    - pyvisgraph==0.2.1
+    - requests==2.25.1
+    - scipy==1.6.2
+    - shapely-geojson==0.0.1
+    - statsmodels==0.12.1
+    - urllib3==1.26.4
+    - xarray==0.17.0
 prefix: /home/daf/miniconda3/envs/fact-species-viz

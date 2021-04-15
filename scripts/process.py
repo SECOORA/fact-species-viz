@@ -1,13 +1,17 @@
 import json
-from typing import Callable, Dict, Optional, Union
+from functools import cache
+from pathlib import PosixPath as Path
+from typing import Callable, Dict, List, Optional, Union
 
 import click
 import numpy as np
 import pandas as pd
+import geojson
 import geopandas
-from shapely.geometry import asPolygon, box
+import pyvisgraph as vg
+from shapely.geometry import asPolygon, box, LineString, MultiPoint, Point
 from shapely.geometry.base import BaseGeometry
-from shapely_geojson import FeatureCollection
+from shapely_geojson import Feature, FeatureCollection
 
 # what is this?!?
 try:
@@ -92,6 +96,183 @@ def animal_boxes(df: pd.DataFrame) -> geopandas.GeoDataFrame:
 
     return gdf
 
+def get_interp_line(lon_start: float, lat_start: float, lon_end: float, lat_end: float, method: str='simple') -> LineString:
+    """
+    Creates a line from start to end.
+    """
+    if method == 'simple':
+        return LineString([
+            (lon_start, lat_start),
+            (lon_end, lat_end)
+        ])
+    elif method == 'visgraph':
+        g = build_vis_graph()
+        vg_line = g.shortest_path(
+            vg.Point(lon_start, lat_start),
+            vg.Point(lon_end, lat_end)
+        )
+
+        # translate into shapely linestring
+        return LineString([
+            (p.x, p.y) for p in vg_line
+        ])
+
+    raise ValueError(f"Unknown method ({method}) for get_interp_line")
+
+
+def animal_interpolated_paths(df: pd.DataFrame) -> geopandas.GeoDataFrame:
+    """
+    For each animal, interpolate the path between detections (daily).
+    """
+    grouped_df = df.drop(columns=['weekcollected', 'monthcollected']).groupby(['fieldnumber'])
+    animal_tracks: List[pd.DataFrame] = []
+
+    for name, df_group in grouped_df:
+        print(name)
+        gdf = df_group.set_index('datecollected')
+
+        # resample on days, average the location of that day, drop empty days
+        gdf = gdf.resample('D').mean().dropna()
+
+        # determine gaps in days
+        diffs = gdf.index.to_series().diff().astype('timedelta64[D]')    # first row is always NaT
+
+        # get all location indicies that match the days we have to fill in
+        end_idxs = [i for i, v in enumerate(diffs.between(1.0, 30.0, inclusive=False).to_list()) if v]
+
+        print("Gaps:", len(end_idxs))
+
+        # end idxs refers to the integer-location based index of the END of the date range
+        # the beginning of the date range is the index directly before it
+        add_dfs = []
+
+        for i, end_idx in enumerate(end_idxs):
+            print("\t", i)
+            begin = gdf.iloc[end_idx - 1]
+            end = gdf.iloc[end_idx]
+
+            # create a date range, daily
+            date_range = pd.date_range(begin.name, end.name, freq='D')
+
+            # if the begin and end is the same, there's no line, and no need to interpolate
+            if np.isclose(begin.longitude, end.longitude) and np.isclose(begin.latitude, end.latitude):
+                interp_df = pd.DataFrame({
+                    'longitude': [begin.longitude] * (len(date_range) - 2),
+                    'latitude': [begin.latitude] * (len(date_range) - 2),
+                }, index=date_range[1:-1])
+
+                add_dfs.append(interp_df)
+                continue
+
+            # make a path between the begin and end
+            line = get_interp_line(begin.longitude, begin.latitude, end.longitude, end.latitude, method='visgraph')
+
+            # normalize that date range so we can feed data to the linestring interpolate
+            # https://stackoverflow.com/a/41532180
+            normalized_dates = (date_range - date_range.min()) / (date_range.max() - date_range.min())
+
+            # skipping the beginning and end, interpolate over the line, transforming into a dataframe
+            interp_points = [list(line.interpolate(nd, normalized=True).coords)[0] for nd in normalized_dates[1:-1]]
+            interp_lons, interp_lats = zip(*interp_points)
+
+            interp_df = pd.DataFrame({
+                'longitude': interp_lons,
+                'latitude': interp_lats,
+            }, index=date_range[1:-1]
+            )
+
+            add_dfs.append(interp_df)
+
+        # concat them all into one dataframe
+        full_gdf = pd.concat([
+            gdf,
+            *add_dfs
+        ]).sort_index()
+
+        # now, use the same gaps technique to build geojson primitives out of contiguous days
+        anim_gjos: List[Feature] = []
+
+        # determine gaps in days
+        full_diffs = full_gdf.index.to_series().diff().astype('timedelta64[D]')
+        full_ilocs = [i for i, v in enumerate((full_diffs > 1.0).to_list()) if v]
+
+        # full_diffs contains indicies where new lines (or points, if length 1) should start.  it's a boundary of a slice.
+        cur_iloc = 0
+        for upper_iloc in [*full_ilocs, None]:  # last slice upper bound is a None
+            s = slice(cur_iloc, upper_iloc)
+            cur_iloc = upper_iloc
+
+            cut_df = full_gdf.iloc[s]
+
+            geoms = geopandas.points_from_xy(cut_df.longitude, cut_df.latitude)
+
+            # turn this into a geojson object
+            if len(cut_df) == 0:    # i don't think this can happen, but we'll just have it here
+                print("LEN 0??")
+                continue
+            elif len(cut_df) == 1:
+                geom = geoms[0]
+
+            else:
+                geom = LineString(geoms)
+
+            gjo = Feature(
+                geom,
+                {
+                    'begin': cut_df.index[0].strftime('%Y-%m-%d'),
+                    'end': cut_df.index[-1].strftime('%Y-%m-%d'),
+                    'fieldnumber': name
+                }
+            )
+
+            anim_gjos.append(gjo)
+
+        anim_fc = FeatureCollection(anim_gjos)
+        fname = f"tmp/at/lines_vis_{name}.geojson"
+        print("writing", fname)
+        to_geojson(anim_fc, fname)
+
+        full_gdf.set_index(pd.Index([name] * len(full_gdf)), append=True, inplace=True)
+        animal_tracks.append(full_gdf)
+
+        # animal_line = MultiPoint(geopandas.points_from_xy(full_gdf.longitude, full_gdf.latitude))
+        # fname = f"tmp/at/{name}.geojson"
+        # print("writing", fname)
+        # to_geojson(animal_line, fname)
+
+    all_interp_animals = pd.concat(animal_tracks)
+
+    return geopandas.GeoDataFrame()
+
+
+@cache
+def build_vis_graph(filename: str=None) -> vg.VisGraph:
+    saved = Path('data/landvisgraph.pk1')
+    if saved.exists():
+        g = vg.VisGraph()
+        g.load('data/landvisgraph.pk1')
+        return g
+
+    if not filename:
+        filename = "/home/daf/dev/mapvamber-daf/secoora-land.geojson" # @TODO
+
+    with open(filename) as f:
+        gj = geojson.load(f)
+
+    polys = []
+    for polygon_outer in gj.geometry.coordinates:
+        assert len(polygon_outer) == 1      # no inner rings
+
+        polys.append(
+            [vg.Point(*c) for c in polygon_outer[0]]
+        )
+
+    g = vg.VisGraph()
+    g.build(polys, workers=4)
+
+    g.save('data/landvisgraph.pk1')
+    return g
+
 
 agg_methods: Dict[str, Dict[str, Union[Callable, str]]] = {
     'raw': {
@@ -117,6 +298,10 @@ agg_methods: Dict[str, Dict[str, Union[Callable, str]]] = {
     'animal_boxes': {
         'callable': animal_boxes,
         'discrim': 'ANIM_BOXES'
+    },
+    'animal_interpolated_paths': {
+        'callable': animal_interpolated_paths,
+        'discrim': 'ANIM_PATHS'
     }
 }
 
@@ -213,7 +398,7 @@ def build_filename(trackercode: str, year: Union[int, str], month: Union[int, st
 @click.option("--simplify", type=float)
 @click.option("--jitter", type=float)
 @click.option("--round-decimals", type=int)
-def process(trackercode: str, year: str, agg_method: str, summary_method: str, month: int, buffer: float, simplify: float, jitter: float, round_decimals: float) -> geopandas.GeoDataFrame:
+def process(trackercode: str, year: str, agg_method: str, summary_method: str, month: int, buffer: float, simplify: float, jitter: float, round_decimals: int) -> geopandas.GeoDataFrame:
     agg_callable: Callable[[pd.DataFrame], geopandas.GeoDataFrame] = agg_methods[agg_method]['callable']
     file_discriminant: str = agg_methods[agg_method]['discrim']
 
@@ -257,12 +442,15 @@ def process(trackercode: str, year: str, agg_method: str, summary_method: str, m
     return gdf
 
 
-def load_df(trackercode: str, year: str, trim: bool=True, jitter: Optional[float]=None, round_decimals: Optional[int]=None) -> geopandas.GeoSeries:
+def load_df(trackercode: str, year: str, trim: bool=True, jitter: Optional[float]=None, round_decimals: Optional[int]=None, extra_cols: Optional[List[str]]=None) -> geopandas.GeoSeries:
     kwargs = {
         'parse_dates': ['datelastmodified', 'datecollected']
     } 
     if trim:
         kwargs['usecols'] = ['fieldnumber', 'latitude', 'longitude', 'datecollected', 'monthcollected']
+        if extra_cols is not None:
+            kwargs['usecols'].extend(extra_cols)
+
         kwargs['parse_dates'] = ['datecollected']
 
     df = pd.read_csv(f"data/{trackercode}_{year}.csv",
