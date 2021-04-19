@@ -404,11 +404,33 @@ def make_contour_polygons(gdf: geopandas.GeoDataFrame, levels: List[Union[int, f
         # they form polygons, except near the edges, they might not be closed, but this should hopefully not be a problem
         # with our giant area. famous last words.
 
-        polys = [
-            Polygon([
+        # the contour list doesn't give us a list of what's an interior so we have to find this ourselves by keeping track
+        # and continuously refining polygons.
+        polys: List[Polygon] = []
+
+        for contour in contours:
+            contour_poly = Polygon([
                 (interp_x(ix), interp_y(iy)) for iy, ix in contour
-            ]) for contour in contours
-        ]
+            ])
+
+            # now find if it's already contained
+            for i, ep in enumerate(polys):
+                if ep.contains(contour_poly):
+                    print("CONTAINED")
+                    new_poly = Polygon(
+                        ep.exterior.coords,
+                        holes=[
+                            *[epi.coords for epi in ep.interiors],
+                            contour_poly.exterior.coords
+                        ]
+                    )
+
+                    # replace existing poly at the same index
+                    polys[i] = new_poly
+                    break
+            else:
+                # not contained, add it to top level polygon list
+                polys.append(contour_poly)
 
         fpoly = polys[0] if len(polys) == 1 else MultiPolygon(polys)
 
@@ -426,10 +448,9 @@ def make_contour_polygons(gdf: geopandas.GeoDataFrame, levels: List[Union[int, f
 
 @singledispatch
 def smooth_polygon(poly: Polygon, refinements: int=5) -> Polygon:
-    assert len(poly.interiors) == 0, "Can't do interior rings yet"  # @TODO interior rings
-
     return Polygon(
-        chaikins_corner_cutting(poly.exterior.coords, refinements=refinements)
+        chaikins_corner_cutting(poly.exterior.coords, refinements=refinements),
+        holes=[chaikins_corner_cutting(i.coords) for i in poly.interiors]
     )
 
 
