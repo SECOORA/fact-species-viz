@@ -14,6 +14,7 @@ from shapely.geometry.base import BaseGeometry
 from shapely_geojson import Feature, FeatureCollection
 from skimage.measure import find_contours
 from scipy.interpolate import interp1d
+from tqdm import tqdm
 
 # what is this?!?
 try:
@@ -122,15 +123,15 @@ def get_interp_line(lon_start: float, lat_start: float, lon_end: float, lat_end:
     raise ValueError(f"Unknown method ({method}) for get_interp_line")
 
 
-def animal_interpolated_paths(df: pd.DataFrame, interp_method: str="simple") -> geopandas.GeoDataFrame:
+def animal_interpolated_paths(df: pd.DataFrame, interp_method: str="visgraph") -> geopandas.GeoDataFrame:
     """
     For each animal, interpolate the path between detections (daily).
     """
     grouped_df = df.drop(columns=['weekcollected', 'monthcollected']).groupby(['fieldnumber'])
     animal_tracks: List[pd.DataFrame] = []
 
-    for name, df_group in grouped_df:
-        print(name)
+    for name, df_group in tqdm(grouped_df, desc="Animal Daily Position"):
+        # print(name)
         gdf = df_group.set_index('datecollected')
 
         # resample on days, average the location of that day, drop empty days
@@ -142,14 +143,14 @@ def animal_interpolated_paths(df: pd.DataFrame, interp_method: str="simple") -> 
         # get all location indicies that match the days we have to fill in
         end_idxs = [i for i, v in enumerate(diffs.between(1.0, 30.0, inclusive=False).to_list()) if v]
 
-        print("Gaps:", len(end_idxs))
+        # print("Gaps:", len(end_idxs))
 
         # end idxs refers to the integer-location based index of the END of the date range
         # the beginning of the date range is the index directly before it
         add_dfs = []
 
-        for i, end_idx in enumerate(end_idxs):
-            print("\t", i)
+        for i, end_idx in enumerate(tqdm(end_idxs, desc="Filling gaps")):
+            # print("\t", i)
             begin = gdf.iloc[end_idx - 1]
             end = gdf.iloc[end_idx]
 
@@ -229,12 +230,12 @@ def animal_interpolated_paths(df: pd.DataFrame, interp_method: str="simple") -> 
 
             anim_gjos.append(gjo)
 
-        # CACHE ON DISK
+        ## CACHE ON DISK
 
-        anim_fc = FeatureCollection(anim_gjos)
-        fname = f"tmp/at/lines_vis_{name}.geojson"
-        print("writing", fname)
-        to_geojson(anim_fc, fname)
+        # anim_fc = FeatureCollection(anim_gjos)
+        # fname = f"tmp/at/lines_vis_{name}.geojson"
+        # print("writing", fname)
+        # to_geojson(anim_fc, fname)
 
         # full_gdf.set_index(pd.Index([name] * len(full_gdf)), append=True, inplace=True)
         feature_gdf = geopandas.GeoDataFrame.from_features(anim_gjos)
@@ -249,15 +250,18 @@ def animal_interpolated_paths(df: pd.DataFrame, interp_method: str="simple") -> 
     all_gdf = geopandas.GeoDataFrame(all_interp_animals, geometry='geometry', crs='EPSG:4326')
 
     # make a grid, join them
-    matched_gdf = _match_with_grid(all_gdf)
+    print("Gridding and matching animal tracks")
+    matched_gdf = _match_with_grid(all_gdf, resolution=10)
 
     # transform to points
     matched_gdf.geometry = matched_gdf.geometry.apply(lambda x: x.centroid)
 
     # build contour polygons
+    print("Building contour polygons")
     contour_polys = make_contour_polygons(matched_gdf, levels=list(range(1, int(matched_gdf['counts'].max()) + 1)))
 
     # smooth polygons out
+    print("Smoothing contour polygons")
     smoothed = [smooth_polygon(cpoly) for cpoly in contour_polys]
 
     # save to disk
@@ -416,7 +420,6 @@ def make_contour_polygons(gdf: geopandas.GeoDataFrame, levels: List[Union[int, f
             # now find if it's already contained
             for i, ep in enumerate(polys):
                 if ep.contains(contour_poly):
-                    print("CONTAINED")
                     new_poly = Polygon(
                         ep.exterior.coords,
                         holes=[
