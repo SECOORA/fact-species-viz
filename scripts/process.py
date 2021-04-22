@@ -99,6 +99,7 @@ def animal_boxes(df: pd.DataFrame) -> geopandas.GeoDataFrame:
 
     return gdf
 
+
 def get_interp_line(lon_start: float, lat_start: float, lon_end: float, lat_end: float, method: str='simple') -> LineString:
     """
     Creates a line from start to end.
@@ -123,7 +124,7 @@ def get_interp_line(lon_start: float, lat_start: float, lon_end: float, lat_end:
     raise ValueError(f"Unknown method ({method}) for get_interp_line")
 
 
-def animal_interpolated_paths(df: pd.DataFrame, interp_method: str="visgraph") -> geopandas.GeoDataFrame:
+def animal_interpolated_paths(df: pd.DataFrame, interp_method: str="simple") -> geopandas.GeoDataFrame:
     """
     For each animal, interpolate the path between detections (daily).
     """
@@ -135,7 +136,7 @@ def animal_interpolated_paths(df: pd.DataFrame, interp_method: str="visgraph") -
         gdf = df_group.set_index('datecollected')
 
         # resample on days, average the location of that day, drop empty days
-        gdf = gdf.resample('D').mean().dropna()
+        gdf = gdf.resample('D').mean().dropna().assign(fieldnumber=name)
 
         # determine gaps in days
         diffs = gdf.index.to_series().diff().astype('timedelta64[D]')    # first row is always NaT
@@ -162,7 +163,7 @@ def animal_interpolated_paths(df: pd.DataFrame, interp_method: str="visgraph") -
                 interp_df = pd.DataFrame({
                     'longitude': [begin.longitude] * (len(date_range) - 2),
                     'latitude': [begin.latitude] * (len(date_range) - 2),
-                }, index=date_range[1:-1])
+                }, index=date_range[1:-1]).assign(fieldnumber=name)
 
                 add_dfs.append(interp_df)
                 continue
@@ -181,8 +182,7 @@ def animal_interpolated_paths(df: pd.DataFrame, interp_method: str="visgraph") -
             interp_df = pd.DataFrame({
                 'longitude': interp_lons,
                 'latitude': interp_lats,
-            }, index=date_range[1:-1]
-            )
+            }, index=date_range[1:-1]).assign(fieldnumber=name)
 
             add_dfs.append(interp_df)
 
@@ -190,87 +190,21 @@ def animal_interpolated_paths(df: pd.DataFrame, interp_method: str="visgraph") -
         full_gdf = pd.concat([
             gdf,
             *add_dfs
-        ]).sort_index()
+        ]).sort_index().rename_axis('datecollected')
 
-        # now, use the same gaps technique to build geojson primitives out of contiguous days
-        anim_gjos: List[Feature] = []
+        animal_tracks.append(full_gdf)
 
-        # determine gaps in days
-        full_diffs = full_gdf.index.to_series().diff().astype('timedelta64[D]')
-        full_ilocs = [i for i, v in enumerate((full_diffs > 1.0).to_list()) if v]
+    full_animal_tracks = pd.concat(animal_tracks)
 
-        # full_diffs contains indicies where new lines (or points, if length 1) should start.  it's a boundary of a slice.
-        cur_iloc = 0
-        for upper_iloc in [*full_ilocs, None]:  # last slice upper bound is a None
-            s = slice(cur_iloc, upper_iloc)
-            cur_iloc = upper_iloc
+    # restore monthlycollected for all points - the synethsized points didn't have them
+    full_animal_tracks['monthcollected'] = full_animal_tracks.index.month
 
-            cut_df = full_gdf.iloc[s]
+    # turn into a gdf
+    full_animal_daily_pos = geopandas.GeoDataFrame(full_animal_tracks, geometry=geopandas.points_from_xy(full_animal_tracks.longitude, full_animal_tracks.latitude))
+    full_animal_daily_pos.reset_index(inplace=True)
+    full_animal_daily_pos.set_index('monthcollected', inplace=True)
 
-            geoms = geopandas.points_from_xy(cut_df.longitude, cut_df.latitude)
-
-            # turn this into a geojson object
-            if len(cut_df) == 0:    # i don't think this can happen, but we'll just have it here
-                print("LEN 0??")
-                continue
-            elif len(cut_df) == 1:
-                geom = geoms[0]
-
-            else:
-                geom = LineString(geoms)
-
-            gjo = Feature(
-                geom,
-                {
-                    'begin': cut_df.index[0].strftime('%Y-%m-%d'),
-                    'end': cut_df.index[-1].strftime('%Y-%m-%d'),
-                    'fieldnumber': name
-                }
-            )
-
-            anim_gjos.append(gjo)
-
-        ## CACHE ON DISK
-
-        # anim_fc = FeatureCollection(anim_gjos)
-        # fname = f"tmp/at/lines_vis_{name}.geojson"
-        # print("writing", fname)
-        # to_geojson(anim_fc, fname)
-
-        # full_gdf.set_index(pd.Index([name] * len(full_gdf)), append=True, inplace=True)
-        feature_gdf = geopandas.GeoDataFrame.from_features(anim_gjos)
-        animal_tracks.append(feature_gdf)
-
-        # animal_line = MultiPoint(geopandas.points_from_xy(full_gdf.longitude, full_gdf.latitude))
-        # fname = f"tmp/at/{name}.geojson"
-        # print("writing", fname)
-        # to_geojson(animal_line, fname)
-
-    all_interp_animals = pd.concat(animal_tracks, ignore_index=True)
-    all_gdf = geopandas.GeoDataFrame(all_interp_animals, geometry='geometry', crs='EPSG:4326')
-
-    # make a grid, join them
-    print("Gridding and matching animal tracks")
-    matched_gdf = _match_with_grid(all_gdf, resolution=10)
-
-    # transform to points
-    matched_gdf.geometry = matched_gdf.geometry.apply(lambda x: x.centroid)
-
-    # build contour polygons
-    print("Building contour polygons")
-    contour_polys = make_contour_polygons(matched_gdf, levels=list(range(1, int(matched_gdf['counts'].max()) + 1)))
-
-    # smooth polygons out
-    print("Smoothing contour polygons")
-    smoothed = [smooth_polygon(cpoly) for cpoly in contour_polys]
-
-    # save to disk
-    fc = FeatureCollection(smoothed)
-    fname = f"tmp/at/final-contours-smoothed.geojson"
-    print("writing", fname)
-    to_geojson(fc, fname)
-
-    return all_gdf
+    return full_animal_daily_pos
 
 
 @cache
@@ -560,6 +494,106 @@ def summary_rotated_bbox(gdf: geopandas.GeoDataFrame) -> BaseGeometry:
     return geopandas.GeoSeries([rbbox])
 
 
+def summary_distribution(gdf: geopandas.GeoDataFrame) -> FeatureCollection:
+    """
+    Converts a GeoDataFrame with per-animal daily positions into paths, then 
+    intersects them with a regular grid of boxes and generates a heatmap of polygons.
+    """
+    animal_tracks: List[geopandas.GeoDataFrame] = []
+
+    # incoming gdf is all daily points in a month for every animal - break it into animals instead, and reindex by datecollected
+    gdfs = gdf.set_index('datecollected').sort_index().groupby('fieldnumber')
+
+    for name, full_gdf in gdfs:
+        # now, use the same gaps technique to build geojson primitives out of contiguous days
+        anim_gjos: List[Feature] = []
+
+        # determine gaps in days
+        full_diffs = full_gdf.index.to_series().diff().astype('timedelta64[D]')
+        full_ilocs = [i for i, v in enumerate((full_diffs > 1.0).to_list()) if v]
+
+        # full_diffs contains indicies where new lines (or points, if length 1) should start.  it's a boundary of a slice.
+        cur_iloc = 0
+        for upper_iloc in [*full_ilocs, None]:  # last slice upper bound is a None
+            s = slice(cur_iloc, upper_iloc)
+            cur_iloc = upper_iloc
+
+            cut_df = full_gdf.iloc[s]
+
+            geoms = geopandas.points_from_xy(cut_df.longitude, cut_df.latitude)
+
+            # turn this into a geojson object
+            if len(cut_df) == 0:    # i don't think this can happen, but we'll just have it here
+                print("LEN 0??")
+                continue
+            elif len(cut_df) == 1:
+                geom = geoms[0]
+
+            else:
+                geom = LineString(geoms)
+
+            gjo = Feature(
+                geom,
+                {
+                    'begin': cut_df.index[0].strftime('%Y-%m-%d'),
+                    'end': cut_df.index[-1].strftime('%Y-%m-%d'),
+                    'fieldnumber': name
+                }
+            )
+
+            anim_gjos.append(gjo)
+
+        ## CACHE ON DISK
+
+        # anim_fc = FeatureCollection(anim_gjos)
+        # fname = f"tmp/at/lines_vis_{name}.geojson"
+        # print("writing", fname)
+        # to_geojson(anim_fc, fname)
+
+        # full_gdf.set_index(pd.Index([name] * len(full_gdf)), append=True, inplace=True)
+        feature_gdf = geopandas.GeoDataFrame.from_features(anim_gjos)
+        animal_tracks.append(feature_gdf)
+
+        # animal_line = MultiPoint(geopandas.points_from_xy(full_gdf.longitude, full_gdf.latitude))
+        # fname = f"tmp/at/{name}.geojson"
+        # print("writing", fname)
+        # to_geojson(animal_line, fname)
+
+    all_interp_animals = pd.concat(animal_tracks, ignore_index=True)
+    all_gdf = geopandas.GeoDataFrame(all_interp_animals, geometry='geometry', crs='EPSG:4326')
+
+    # make a grid, join them
+    print("Gridding and matching animal tracks")
+    matched_gdf = _match_with_grid(all_gdf, resolution=10)
+
+    # transform to points
+    matched_gdf.geometry = matched_gdf.geometry.apply(lambda x: x.centroid)
+
+    # build contour polygons
+    print("Building contour polygons")
+    contour_polys = make_contour_polygons(matched_gdf, levels=list(range(1, int(matched_gdf['counts'].max()) + 1)))
+
+    # smooth polygons out
+    print("Smoothing contour polygons")
+    smoothed = [smooth_polygon(cpoly) for cpoly in contour_polys]
+
+    # # save to disk
+    # fc = FeatureCollection(
+    #     smoothed,
+    #     properties={
+    #         'month': gdf.index[0],
+    #         'year': gdf['datecollected'].iloc[0].year,
+    #         'project': '??'
+    #     }
+    # )
+    # fname = f"tmp/at/final-contours-smoothed.geojson"
+    # print("writing", fname)
+    # to_geojson(fc, fname)
+
+    ret = geopandas.GeoDataFrame.from_features(smoothed, crs=all_gdf.crs)
+    return ret
+
+
 summary_methods = {
     'raw': {
         'callable': summary_raw,
@@ -580,8 +614,11 @@ summary_methods = {
     'rotated_bbox': {
         'callable': summary_rotated_bbox,
         'discrim': 'rbbox',
+    },
+    'distribution': {
+        'callable': summary_distribution,
+        'discrim': 'dist'
     }
-
 }
 
 
