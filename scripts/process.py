@@ -124,7 +124,7 @@ def get_interp_line(lon_start: float, lat_start: float, lon_end: float, lat_end:
     raise ValueError(f"Unknown method ({method}) for get_interp_line")
 
 
-def animal_interpolated_paths(df: pd.DataFrame, interp_method: str="simple") -> geopandas.GeoDataFrame:
+def animal_interpolated_paths(df: pd.DataFrame, interp_method: str="simple", max_day_gap: int=15) -> geopandas.GeoDataFrame:
     """
     For each animal, interpolate the path between detections (daily).
     """
@@ -142,7 +142,7 @@ def animal_interpolated_paths(df: pd.DataFrame, interp_method: str="simple") -> 
         diffs = gdf.index.to_series().diff().astype('timedelta64[D]')    # first row is always NaT
 
         # get all location indicies that match the days we have to fill in
-        end_idxs = [i for i, v in enumerate(diffs.between(1.0, 30.0, inclusive=False).to_list()) if v]
+        end_idxs = [i for i, v in enumerate(diffs.between(1.0, float(max_day_gap), inclusive=False).to_list()) if v]
 
         # print("Gaps:", len(end_idxs))
 
@@ -237,19 +237,20 @@ def build_vis_graph(filename: str=None) -> vg.VisGraph:
 
 
 # https://github.com/adaj/geohunter/blob/65c65a451f1edaa110de5629e4a3fa9c1cbaa50b/geohunter/util.py#L137-L169
-def make_gridsquares(city_shape, resolution=1):
+@cache
+def make_gridsquares(bounds, resolution=1):
     """It constructs a grid of square cells.
     Parameters
     ----------
-    city_shape : GeoDataFrame.
+    bounds : 
         Corresponds to the boundary geometry in which the grid will be formed.
     resolution : float, default is 1.
         Space between the square cells.
     """
-    x0 = city_shape.bounds.min().values[0]
-    xf = city_shape.bounds.max().values[2]
-    y0 = city_shape.bounds.min().values[1]
-    yf = city_shape.bounds.max().values[3]
+    x0 = bounds[0] - 1
+    xf = bounds[2] + 1
+    y0 = bounds[1] - 1
+    yf = bounds[3] + 1
     n_y = int((yf-y0)/(resolution/110.57))
     n_x = int((xf-x0)/(resolution/111.32))
     grid = {}
@@ -263,7 +264,7 @@ def make_gridsquares(city_shape, resolution=1):
                                             [x0, y0+(resolution/110.57)]])}
             c += 1
             y0 += resolution/110.57
-        y0 = city_shape.bounds.min().values[1]
+        y0 = bounds[1] - 1
         x0 += resolution/111.32
     grid = pd.DataFrame(grid).transpose()
     grid = geopandas.GeoDataFrame(grid, geometry='geometry',
@@ -273,15 +274,12 @@ def make_gridsquares(city_shape, resolution=1):
     #return grid[~grid.index.duplicated()]
 
 
-def _match_with_grid(animal_gdf: geopandas.GeoDataFrame, resolution: int=10) -> geopandas.GeoDataFrame:
+def _match_with_grid(animal_gdf: geopandas.GeoDataFrame, bounds, resolution: int=10) -> geopandas.GeoDataFrame:
     """
     @param 
     # gdf is geopandas dataframe wrapped around shapely geometry for each animal,
     """
-    # s_grid is secoora water bounds made into a grid by make_gridsquares
-    # really only need bounds though, we need the full square even over land, so likely don't need the water polygon
-    gdf = geopandas.read_file("data/secoora-water.geojson")
-    s_grid = make_gridsquares(gdf, resolution=resolution)
+    s_grid = make_gridsquares(bounds, resolution=resolution)
 
     # join the grid squares with the animal geometry
     match_counts = geopandas.sjoin(animal_gdf, s_grid).groupby('index_right').size().to_frame('counts')
@@ -460,15 +458,15 @@ agg_methods: Dict[str, Dict[str, Union[Callable, str]]] = {
     }
 }
 
-def summary_raw(gdf: geopandas.GeoDataFrame) -> BaseGeometry:
+def summary_raw(gdf: geopandas.GeoDataFrame, **kwargs) -> BaseGeometry:
     #return FeatureCollection([gi for gi in gdf.geometry])
     return geopandas.GeoSeries([gdf.unary_union])
 
-def summary_convex(gdf: geopandas.GeoDataFrame) -> geopandas.GeoSeries:
+def summary_convex(gdf: geopandas.GeoDataFrame, **kwargs) -> geopandas.GeoSeries:
     hull = geopandas.GeoSeries([gdf.unary_union]).convex_hull
     return hull
 
-def summary_concave(gdf: geopandas.GeoDataFrame) -> BaseGeometry:
+def summary_concave(gdf: geopandas.GeoDataFrame, **kwargs) -> BaseGeometry:
     month_df_points = np.stack(
         (
             gdf['longitude'].to_numpy(),
@@ -486,15 +484,15 @@ def summary_concave(gdf: geopandas.GeoDataFrame) -> BaseGeometry:
     print("WARN: could not do concave hull, returning convex")
     return summary_convex(gdf)
 
-def summary_bbox(gdf: geopandas.GeoDataFrame) -> BaseGeometry:
+def summary_bbox(gdf: geopandas.GeoDataFrame, **kwargs) -> BaseGeometry:
     return geopandas.GeoSeries([box(*gdf.total_bounds)])
 
-def summary_rotated_bbox(gdf: geopandas.GeoDataFrame) -> BaseGeometry:
+def summary_rotated_bbox(gdf: geopandas.GeoDataFrame, **kwargs) -> BaseGeometry:
     rbbox = gdf.unary_union.minimum_rotated_rectangle
     return geopandas.GeoSeries([rbbox])
 
 
-def summary_distribution(gdf: geopandas.GeoDataFrame) -> FeatureCollection:
+def summary_distribution(gdf: geopandas.GeoDataFrame, bounds=None, **kwargs) -> FeatureCollection:
     """
     Converts a GeoDataFrame with per-animal daily positions into paths, then 
     intersects them with a regular grid of boxes and generates a heatmap of polygons.
@@ -523,12 +521,10 @@ def summary_distribution(gdf: geopandas.GeoDataFrame) -> FeatureCollection:
             geoms = geopandas.points_from_xy(cut_df.longitude, cut_df.latitude)
 
             # turn this into a geojson object
-            if len(cut_df) == 0:    # i don't think this can happen, but we'll just have it here
-                print("LEN 0??")
-                continue
-            elif len(cut_df) == 1:
-                geom = geoms[0]
+            assert len(cut_df) > 0, "Animal track has no length?"
 
+            if len(cut_df) == 1 or len(geoms.unique()) == 1:       # if all same point, it's just one point
+                geom = geoms[0]
             else:
                 geom = LineString(geoms)
 
@@ -564,7 +560,7 @@ def summary_distribution(gdf: geopandas.GeoDataFrame) -> FeatureCollection:
 
     # make a grid, join them
     print("Gridding and matching animal tracks")
-    matched_gdf = _match_with_grid(all_gdf, resolution=10)
+    matched_gdf = _match_with_grid(all_gdf, bounds, resolution=10)
 
     # transform to points
     matched_gdf.geometry = matched_gdf.geometry.apply(lambda x: x.centroid)
@@ -680,11 +676,11 @@ def process(trackercode: str, year: str, agg_method: str, summary_method: str, m
         )
 
         fname = f'out/{ffname}'
-        month_df = gdf.loc[imonth]
-        print(fname)
+        month_df = gdf.loc[[imonth]]    # https://stackoverflow.com/a/20384317 
+        print(fname, len(month_df))
 
         try:
-            summary = summary_callable(month_df)
+            summary = summary_callable(month_df, bounds=gdf.unary_union.bounds)
 
             if buffer:
                 summary = summary.buffer(buffer)
