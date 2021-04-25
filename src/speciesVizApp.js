@@ -24,7 +24,7 @@ function SpeciesVizApp(props) {
 
   const [trackerCode, setTrackerCode] = useState(query.get('project') || 'BLKTP');
   const [month, setMonth] = useState(query.get('month') || 5);
-  const [year, setYear] = useState(query.get('year') || 2018);
+  const [year, setYear] = useState(query.get('year') || 2019);
 
   const buildQueryString = (newArgs) => {
     let {newMonth = month, newYear = year, newProject = trackerCode} = newArgs;
@@ -48,7 +48,11 @@ function SpeciesVizApp(props) {
     }
 
     if (query.has("month")) {
-      setMonth(parseInt(query.get("month")));
+      let m = query.get("month");
+      if (m !== "all") {
+        m = parseInt(m);
+      }
+      setMonth(m);
     }
 
     if (query.has("year")) {
@@ -111,7 +115,9 @@ function SpeciesVizApp(props) {
       </div>
       <nav>
         <h1 className="text-2xl ml-24 mb-2 pl-1">
-          <a href="/">FACT RANGE TESTBED</a>
+          <a href="/">
+            FACT <span className="line-through">RANGE</span> DISTRIBUTION TESTBED
+          </a>
         </h1>
         <Chooser
           items={trackercodes}
@@ -141,7 +147,9 @@ function SpeciesVizApp(props) {
         />
 
         <Chooser
-          items={[...Array(12).keys()].map((m) => m + 1)}
+          items={[...Array(12).keys(), "all"].map((m) =>
+            m !== "all" ? m + 1 : m
+          )}
           onClick={_setMonth}
           curVal={month}
           label="Month"
@@ -151,12 +159,16 @@ function SpeciesVizApp(props) {
         trackercode={trackerCode}
         years={[year]}
         months={[month]}
+        mapHeight={700}
         variants={[
-          "FULL",
-          "FULL_concave",
-          "FULL_convex",
-          "FULL_rbbox",
-          "ANIM_BOXES",
+          // "FULL",
+          // "FULL_concave",
+          // "FULL_convex",
+          // "FULL_rbbox",
+          // "ANIM_BOXES",
+          "ANIM_PATHS_dist",
+          "ANIM_PATHS_dist_buffered",
+          "ANIM_PATHS_dist_kde",
         ]}
       />
     </div>

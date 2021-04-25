@@ -4,13 +4,88 @@ import bbox from "@turf/bbox";
 
 import GLMap from "./glmap.js";
 
+const fillRain = [
+  0.0,
+  "rgba(238,237,243,255)",
+  0.1,
+  "rgba(222,211,201,255)",
+  0.2,
+  "rgba(203,186,152,255)",
+  0.3,
+  "rgba(161,172,130,255)",
+  0.4,
+  "rgba(115,157,117,255)",
+  0.5,
+  "rgba(61,142,110,255)",
+  0.6,
+  "rgba(12,123,110,255)",
+  0.7,
+  "rgba(8,99,107,255)",
+  0.8,
+  "rgba(30,75,95,255)",
+  0.9,
+  "rgba(37,51,75,255)",
+];
+
+const fillThermal = [
+  0.0,
+  "rgba(4,35,51,255)",
+  0.1,
+  "rgba(15,50,106,255)",
+  0.2,
+  "rgba(64,52,159,255)",
+  0.3,
+  "rgba(103,67,150,255)",
+  0.4,
+  "rgba(139,83,141,255)",
+  0.5,
+  "rgba(177,95,130,255)",
+  0.6,
+  "rgba(214,108,108,255)",
+  0.7,
+  "rgba(243,130,77,255)",
+  0.8,
+  "rgba(252,166,60,255)",
+  0.9,
+  "rgba(247,208,69,255)",
+];
+
+const fillThermalR = [
+  0.0,
+  "rgba(232,250,91,255)",
+  0.1,
+  "rgba(247,208,69,255)",
+  0.2,
+  "rgba(252,166,60,255)",
+  0.3,
+  "rgba(243,130,77,255)",
+  0.4,
+  "rgba(214,108,108,255)",
+  0.5,
+  "rgba(175,95,130,255)",
+  0.6,
+  "rgba(139,83,141,255)",
+  0.7,
+  "rgba(103,67,150,255)",
+  0.8,
+  "rgba(64,52,159,255)",
+  0.9,
+  "rgba(15,50,106,255)",
+];
+
 const normalStyle = {
   type: "fill",
 
   paint: {
-    "fill-color": "#fcc87f",
+    // "fill-color": "#fcc87f",
     "fill-opacity": 0.5,
-    "fill-outline-color": "#f6a577"
+    // "fill-outline-color": "#f6a577"
+    "fill-color": [
+      "interpolate",
+      ["linear"],
+      ["get", "pct"],
+      ...fillThermal
+    ],
   },
 };
 
@@ -38,7 +113,7 @@ function MapGrid(props) {
 
 
   const keys = useMemo(() => {
-    let variantPairs = DEFAULT_VARIANTS.map(variant => {
+    let variantPairs = (props.variants || DEFAULT_VARIANTS).map(variant => {
       return [
         variant,
         props.years.flatMap((y) => {
@@ -54,7 +129,7 @@ function MapGrid(props) {
 
   return (
     <div className="mapgrid">
-      {DEFAULT_VARIANTS.map((k) => {
+      {(props.variants || DEFAULT_VARIANTS).map((k) => {
         return (
           <div className="relative" style={{ maxHeight: mapHeight }} key={k}>
             <h3 className="absolute top-0 left-0 font-bold z-50">{k}</h3>
@@ -73,19 +148,29 @@ function MapGrid(props) {
                     return null;
                   }
 
-                  if (d.features[0].geometry.type === "MultiPoint") {
-                    data = { points: d.features[0] };
-                  } else {
-                    data = { range: d.features[0] };
-                  }
+                  const catalog = d.features.map((feat, idx) => {
+                    return {
+                      key: `${k}-${idx}`,
+                      boundingBox: bbox(feat),
+                      data: {
+                        range: feat
+                      }
+                    }
+                  })
 
-                  let catalog = [
-                    {
-                      key: k,
-                      boundingBox: bbox(d.features[0]),
-                      data: data,
-                    },
-                  ];
+                  // if (d.features[0].geometry.type === "MultiPoint") {
+                  //   data = { points: d.features[0] };
+                  // } else {
+                  //   data = { range: d.features[0] };
+                  // }
+
+                  // let catalog = [
+                  //   {
+                  //     key: k,
+                  //     boundingBox: bbox(d.features[0]),
+                  //     data: data,
+                  //   },
+                  // ];
 
                   return {
                     name: k,
