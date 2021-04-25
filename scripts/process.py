@@ -1,7 +1,7 @@
 import json
 from functools import cache, singledispatch
 from pathlib import PosixPath as Path
-from typing import Callable, Dict, List, Optional, Union
+from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import click
 import numpy as np
@@ -9,11 +9,13 @@ import pandas as pd
 import geojson
 import geopandas
 import pyvisgraph as vg
-from shapely.geometry import asPolygon, box, LineString, MultiPoint, Point, Polygon, MultiPolygon
+from shapely.geometry import asPolygon, box, LineString, MultiPoint, Point, Polygon, MultiPolygon, geo
 from shapely.geometry.base import BaseGeometry
+from shapely.ops import unary_union
 from shapely_geojson import Feature, FeatureCollection
 from skimage.measure import find_contours
 from scipy.interpolate import interp1d
+from scipy.stats import gaussian_kde
 from tqdm import tqdm
 
 # what is this?!?
@@ -238,7 +240,7 @@ def build_vis_graph(filename: str=None) -> vg.VisGraph:
 
 # https://github.com/adaj/geohunter/blob/65c65a451f1edaa110de5629e4a3fa9c1cbaa50b/geohunter/util.py#L137-L169
 @cache
-def make_gridsquares(bounds, resolution=1):
+def make_gridsquares(bounds, resolution=1) -> Tuple[geopandas.GeoDataFrame, geopandas.GeoDataFrame]:
     """It constructs a grid of square cells.
     Parameters
     ----------
@@ -266,12 +268,46 @@ def make_gridsquares(bounds, resolution=1):
             y0 += resolution/110.57
         y0 = bounds[1] - 1
         x0 += resolution/111.32
-    grid = pd.DataFrame(grid).transpose()
-    grid = geopandas.GeoDataFrame(grid, geometry='geometry',
+    pd_grid = pd.DataFrame(grid).transpose()
+    gp_grid = geopandas.GeoDataFrame(pd_grid, geometry='geometry',
                             crs='EPSG:4326')
-    return grid
+
+    centroids = gp_grid.geometry.apply(lambda x: x.centroid)
+    p_grid = geopandas.GeoDataFrame(geometry=centroids)
+    p_grid['lat'] = centroids.y
+    p_grid['lon'] = centroids.x
+
+    return gp_grid, p_grid
     #grid = geopandas.sjoin(grid, city_shape, op='intersects')
     #return grid[~grid.index.duplicated()]
+
+
+# https://github.com/adaj/geohunter/blob/65c65a451f1edaa110de5629e4a3fa9c1cbaa50b/geohunter/util.py#L21
+def kde_interpolation(poi, grid, bw='scott') -> geopandas.GeoDataFrame:
+    """Applies kernel density estimation to a set points-of-interest
+    measuring the density estimation on a grid of places (arbitrary points
+    regularly spaced).
+    Parameters
+    ----------
+    poi : GeoDataFrame.
+        Corresponds to input data.
+    bw : 'scott', 'silverman' or float.
+        The bandwidth for kernel density estimation. Check `scipy docs`_ about their bw parameter of gaussian_kde.
+    grid : GeoDataFrame
+        Grid of points, should correspond to centroids of make_gridsquares, with lat/lon columns added.
+    Returns
+    -------
+    GeoDataFrame with a grid of points regularly spaced with the respective
+    density values for the input points-of-interest given.
+    """
+    assert isinstance(poi, geopandas.GeoDataFrame)
+    kernel = gaussian_kde(
+        np.vstack([poi.centroid.x, poi.centroid.y]),
+        bw_method=bw
+    )
+    grid_ = grid.copy()
+    grid_['density'] = kernel(grid[['lon', 'lat']].values.T)
+    return grid_
 
 
 def _match_with_grid(animal_gdf: geopandas.GeoDataFrame, bounds, resolution: int=10) -> geopandas.GeoDataFrame:
@@ -279,7 +315,7 @@ def _match_with_grid(animal_gdf: geopandas.GeoDataFrame, bounds, resolution: int
     @param 
     # gdf is geopandas dataframe wrapped around shapely geometry for each animal,
     """
-    s_grid = make_gridsquares(bounds, resolution=resolution)
+    s_grid, _ = make_gridsquares(bounds, resolution=resolution)
 
     # join the grid squares with the animal geometry
     match_counts = geopandas.sjoin(animal_gdf, s_grid).groupby('index_right').size().to_frame('counts')
@@ -292,14 +328,9 @@ def _match_with_grid_kde(animal_gdf: geopandas.GeoDataFrame, bounds, resolution:
     """
     @param 
     """
-    s_grid = make_gridsquares(bounds, resolution=resolution)
-    centroids = s_grid.centroid
-    p_grid = geopandas.GeoDataFrame(geometry=centroids)
-    p_grid['lat'] = centroids.y
-    p_grid['lon'] = centroids.x
+    s_grid, p_grid = make_gridsquares(bounds, resolution=resolution)
 
-    import geohunter as gh
-    kde = gh.util.kde_interpolation(animal_gdf, bw='silverman', grid=p_grid)
+    kde = kde_interpolation(animal_gdf, p_grid, bw='silverman')
     density_frame = kde['density'].to_frame(f'counts')
     density_points = p_grid.join(density_frame)
 
@@ -309,12 +340,15 @@ def _match_with_grid_kde(animal_gdf: geopandas.GeoDataFrame, bounds, resolution:
     return joined
 
 
-def make_contour_polygons(gdf: geopandas.GeoDataFrame, levels: List[Union[int, float]]) -> List[Feature]:
+def make_contour_polygons(gdf: geopandas.GeoDataFrame, levels: Sequence[Union[int, float]], level_adjust: float=0.0) -> List[Feature]:
     """
     Creates a contour filled polygon Feature per level.
 
     @param gdf  GeoDataFrame of a grid of points, ordered by longitude major, latitude minor.
     """
+    # set max level for percent calcs
+    max_level = max(levels)
+
     # figure out how many latitudes exist in the first column of longitudes
     lon_diffs = gdf.geometry.map(lambda p: p.x).diff()
     sig_diffs = lon_diffs[lon_diffs > 0.01]     # @TODO: prolly not good
@@ -340,7 +374,7 @@ def make_contour_polygons(gdf: geopandas.GeoDataFrame, levels: List[Union[int, f
     contour_levels = []
     for level in levels:
         # calculate contours for the given level
-        contours = find_contours(bits, level)
+        contours = find_contours(bits, level + level_adjust)
 
         # each contour in the list is an array of [lat, lon] indices (well, between indicies) that a contour line goes
         # they form polygons, except near the edges, they might not be closed, but this should hopefully not be a problem
@@ -379,7 +413,8 @@ def make_contour_polygons(gdf: geopandas.GeoDataFrame, levels: List[Union[int, f
             Feature(
                 fpoly,
                 properties={
-                    'level': level
+                    'level': level,
+                    'pct': level / max_level
                 }
             )
         )
@@ -406,7 +441,27 @@ def _(poly: Feature, refinements: int=5) -> Feature:
 @smooth_polygon.register
 def __(poly: MultiPolygon, refinements: int=5) -> MultiPolygon:
     return MultiPolygon(
-        [smooth_polygon(p) for p in poly.geoms]
+        [smooth_polygon(p, refinements=refinements) for p in poly.geoms]
+    )
+
+
+@singledispatch
+def buffer_union(poly: Polygon, buffer_size: float=0.1) -> Polygon:
+    return poly.buffer(buffer_size)
+
+
+@buffer_union.register
+def buffer_union_(poly: Feature, buffer_size: float=0.1) -> Feature:
+    return Feature(
+        buffer_union(poly.geometry, buffer_size=buffer_size),
+        properties=poly.properties
+    )
+
+
+@buffer_union.register
+def buffer_union__(poly: MultiPolygon, buffer_size: float=0.1) -> MultiPolygon:
+    return unary_union(
+        [buffer_union(p) for p in poly.geoms]
     )
 
 
@@ -498,7 +553,7 @@ def summary_rotated_bbox(gdf: geopandas.GeoDataFrame, **kwargs) -> BaseGeometry:
     return geopandas.GeoSeries([rbbox])
 
 
-def summary_distribution(gdf: geopandas.GeoDataFrame, bounds=None, **kwargs) -> FeatureCollection:
+def summary_distribution(gdf: geopandas.GeoDataFrame, bounds=None, **kwargs) -> geopandas.GeoDataFrame:
     """
     Converts a GeoDataFrame with per-animal daily positions into paths, then 
     intersects them with a regular grid of boxes and generates a heatmap of polygons.
@@ -569,13 +624,12 @@ def summary_distribution(gdf: geopandas.GeoDataFrame, bounds=None, **kwargs) -> 
     matched_gdf = _match_with_grid(all_gdf, bounds, resolution=10)
 
     # transform to points
-    matched_gdf.geometry = matched_gdf.geometry.centroid
+    matched_gdf.geometry = matched_gdf.geometry.apply(lambda x: x.centroid)
 
     # build contour polygons
     print("Building contour polygons")
-    # adjust level slightly because this method can only go > not >=
-    levels = [l - 0.1 for l in range(1, int(matched_gdf['counts'].max()) + 1)]
-    contour_polys = make_contour_polygons(matched_gdf, levels=levels)
+    levels = [l for l in range(1, int(matched_gdf['counts'].max()) + 1)]
+    contour_polys = make_contour_polygons(matched_gdf, levels=levels, level_adjust=-0.1)
 
     # smooth polygons out
     print("Smoothing contour polygons")
@@ -585,7 +639,17 @@ def summary_distribution(gdf: geopandas.GeoDataFrame, bounds=None, **kwargs) -> 
     return ret
 
 
-def summary_distribution_kde(gdf: geopandas.GeoDataFrame, bounds=None, **kwargs) -> FeatureCollection:
+def summary_distribution_buffered(gdf: geopandas.GeoDataFrame, bounds=None, buffer_size: float=0.05, **kwargs) -> geopandas.GeoDataFrame:
+    """
+    Calls summary_distribution then does a buffer_union on the resulting polygons.
+    """
+    distrib_gdf = summary_distribution(gdf, bounds=bounds, **kwargs)
+    distrib_gdf.geometry = distrib_gdf.geometry.apply(lambda x: buffer_union(x, buffer_size))
+
+    return distrib_gdf
+
+
+def summary_distribution_kde(gdf: geopandas.GeoDataFrame, bounds=None, **kwargs) -> geopandas.GeoDataFrame:
     """
     Does a kernel density estimate on all daily animal locations, intersects them with a regular grid of boxes and generates a heatmap of polygons.
     """
@@ -594,13 +658,14 @@ def summary_distribution_kde(gdf: geopandas.GeoDataFrame, bounds=None, **kwargs)
     matched_gdf = _match_with_grid_kde(gdf, bounds, resolution=10)
 
     # transform to points
-    matched_gdf.geometry = matched_gdf.geometry.centroid
+    matched_gdf.geometry = matched_gdf.geometry.apply(lambda x: x.centroid)
 
     # build contour polygons
     print("Building contour polygons")
     counts, levels = np.histogram(matched_gdf['counts'].values, len(gdf['fieldnumber'].unique()))
-    levels = levels[1:]
-    contour_polys = make_contour_polygons(matched_gdf, levels=levels)
+    levels = [l for l in levels if l > 0.01]
+    adjust = round((levels[1] - levels[0]) / 10, 5)
+    contour_polys = make_contour_polygons(matched_gdf, levels=levels, level_adjust=adjust)
 
     # smooth polygons out
     print("Smoothing contour polygons")
@@ -634,6 +699,10 @@ summary_methods = {
     'distribution': {
         'callable': summary_distribution,
         'discrim': 'dist'
+    },
+    'distribution_buffered': {
+        'callable': summary_distribution_buffered,
+        'discrim': 'dist_buffered'
     },
     'distribution_kde': {
         'callable': summary_distribution_kde,
@@ -687,20 +756,23 @@ def process(trackercode: str, year: str, agg_method: str, summary_method: str, m
     gdf = agg_callable(df)
 
     # for each month:
-    for imonth in gdf.index.unique():
+    for imonth in [*gdf.index.unique(), slice(None)]:
         if month and imonth != month:
             continue
 
         ffname = build_filename(
             trackercode,
             year,
-            imonth,
+            "all" if isinstance(imonth, slice) else imonth,
             file_discriminant,
             summary_discrim
         )
 
         fname = f'out/{ffname}'
-        month_df = gdf.loc[[imonth]]    # https://stackoverflow.com/a/20384317 
+        month_df = gdf.loc[imonth]
+        if isinstance(month_df, (pd.Series, geopandas.GeoSeries)):
+            month_df = gdf.loc[[imonth]]    # https://stackoverflow.com/a/20384317
+
         print(fname, len(month_df))
 
         try:
