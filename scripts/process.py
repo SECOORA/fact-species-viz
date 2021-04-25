@@ -1,4 +1,5 @@
 import json
+import math
 from functools import cache, singledispatch
 from pathlib import PosixPath as Path
 from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
@@ -340,14 +341,20 @@ def _match_with_grid_kde(animal_gdf: geopandas.GeoDataFrame, bounds, resolution:
     return joined
 
 
-def make_contour_polygons(gdf: geopandas.GeoDataFrame, levels: Sequence[Union[int, float]], level_adjust: float=0.0) -> List[Feature]:
+def make_contour_polygons(gdf: geopandas.GeoDataFrame, levels: Sequence[Union[int, float]], level_adjust: float=0.0, range_low: float=-math.inf, range_high: float=math.inf) -> List[Feature]:
     """
     Creates a contour filled polygon Feature per level.
 
     @param gdf  GeoDataFrame of a grid of points, ordered by longitude major, latitude minor.
     """
-    # set max level for percent calcs
+    # set normalized range for percent calcs
+    min_level = min(levels)
     max_level = max(levels)
+    def calc_pct(val, minl=min_level, maxl=max_level):
+        try:
+            return (val - minl) / (maxl - minl)
+        except ZeroDivisionError:
+            return 0.
 
     # figure out how many latitudes exist in the first column of longitudes
     lon_diffs = gdf.geometry.map(lambda p: p.x).diff()
@@ -409,13 +416,20 @@ def make_contour_polygons(gdf: geopandas.GeoDataFrame, levels: Sequence[Union[in
 
         fpoly = polys[0] if len(polys) == 1 else MultiPolygon(polys)
 
+        props = {
+            'level': level,
+            'local_pct': calc_pct(level),
+            'pct': calc_pct(level)      # will only stay if "all"
+        }
+
+        # calc normalized pct vs global dataset range
+        if range_low != -math.inf:
+            props['pct'] = calc_pct(level, range_low, range_high)
+
         contour_levels.append(
             Feature(
                 fpoly,
-                properties={
-                    'level': level,
-                    'pct': level / max_level
-                }
+                properties=props
             )
         )
 
@@ -553,7 +567,7 @@ def summary_rotated_bbox(gdf: geopandas.GeoDataFrame, **kwargs) -> BaseGeometry:
     return geopandas.GeoSeries([rbbox])
 
 
-def summary_distribution(gdf: geopandas.GeoDataFrame, bounds=None, **kwargs) -> geopandas.GeoDataFrame:
+def summary_distribution(gdf: geopandas.GeoDataFrame, bounds=None, range_low: float=-math.inf, range_high: float=math.inf, **kwargs) -> geopandas.GeoDataFrame:
     """
     Converts a GeoDataFrame with per-animal daily positions into paths, then 
     intersects them with a regular grid of boxes and generates a heatmap of polygons.
@@ -629,7 +643,7 @@ def summary_distribution(gdf: geopandas.GeoDataFrame, bounds=None, **kwargs) -> 
     # build contour polygons
     print("Building contour polygons")
     levels = [l for l in range(1, int(matched_gdf['counts'].max()) + 1)]
-    contour_polys = make_contour_polygons(matched_gdf, levels=levels, level_adjust=-0.1)
+    contour_polys = make_contour_polygons(matched_gdf, levels=levels, level_adjust=-0.1, range_low=range_low, range_high=range_high)
 
     # smooth polygons out
     print("Smoothing contour polygons")
@@ -649,7 +663,7 @@ def summary_distribution_buffered(gdf: geopandas.GeoDataFrame, bounds=None, buff
     return distrib_gdf
 
 
-def summary_distribution_kde(gdf: geopandas.GeoDataFrame, bounds=None, **kwargs) -> geopandas.GeoDataFrame:
+def summary_distribution_kde(gdf: geopandas.GeoDataFrame, bounds=None, range_low: float=-math.inf, range_high: float=math.inf, **kwargs) -> geopandas.GeoDataFrame:
     """
     Does a kernel density estimate on all daily animal locations, intersects them with a regular grid of boxes and generates a heatmap of polygons.
     """
@@ -665,7 +679,7 @@ def summary_distribution_kde(gdf: geopandas.GeoDataFrame, bounds=None, **kwargs)
     counts, levels = np.histogram(matched_gdf['counts'].values, len(gdf['fieldnumber'].unique()))
     levels = [l for l in levels if l > 0.01]
     adjust = round((levels[1] - levels[0]) / 10, 5)
-    contour_polys = make_contour_polygons(matched_gdf, levels=levels, level_adjust=adjust)
+    contour_polys = make_contour_polygons(matched_gdf, levels=levels, level_adjust=adjust, range_low=range_low, range_high=range_high)
 
     # smooth polygons out
     print("Smoothing contour polygons")
@@ -755,15 +769,20 @@ def process(trackercode: str, year: str, agg_method: str, summary_method: str, m
     df = load_df(trackercode, year, jitter=jitter, round_decimals=round_decimals)
     gdf = agg_callable(df)
 
+    range_low = -math.inf
+    range_high = math.inf
+
     # for each month:
-    for imonth in [*gdf.index.unique(), slice(None)]:
-        if month and imonth != month:
+    for imonth in [slice(None), *gdf.index.unique()]:
+        is_all = isinstance(imonth, slice)
+
+        if not is_all and (month and imonth != month):
             continue
 
         ffname = build_filename(
             trackercode,
             year,
-            "all" if isinstance(imonth, slice) else imonth,
+            "all" if is_all else imonth,
             file_discriminant,
             summary_discrim
         )
@@ -776,7 +795,12 @@ def process(trackercode: str, year: str, agg_method: str, summary_method: str, m
         print(fname, len(month_df))
 
         try:
-            summary = summary_callable(month_df, bounds=gdf.unary_union.bounds)
+            summary = summary_callable(month_df, bounds=gdf.unary_union.bounds, range_low=range_low, range_high=range_high)
+
+            # if this is the "all", find the range
+            if is_all:
+                range_low = max(range_low, summary['level'].min())
+                range_high = min(range_high, summary['level'].max())
 
             if buffer:
                 summary = summary.buffer(buffer)
@@ -830,6 +854,19 @@ def to_geojson(geoobj, filename: str):
     with open(filename, "w") as f:
         data = geoobj.__geo_interface__ if hasattr(geoobj, '__geo_interface__') else geoobj.to_json()
         json.dump(data, f)
+
+
+def cmocean_to_mapbox(cmap, inc=0.1):
+    out = []
+    for v in np.arange(0, 1., inc):
+        rgb = cmap(float(v))
+        rgb = [str(round(rv * 255)) for rv in rgb]
+        out.append(round(v, 1))
+        out.append(f"rgba({','.join(rgb)})")
+
+    return out
+
+
 
 
 if __name__ == "__main__":
