@@ -23,7 +23,7 @@ function SpeciesVizApp(props) {
     history = useHistory();
 
   const [trackerCode, setTrackerCode] = useState(query.get('project') || 'BLKTP');
-  const [month, setMonth] = useState(query.get('month') || 5);
+  const [month, setMonth] = useState(query.get('month') || 'all');
   const [year, setYear] = useState(query.get('year') || 2019);
 
   const buildQueryString = (newArgs) => {
