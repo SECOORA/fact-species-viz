@@ -1,9 +1,11 @@
+import sys
 from pathlib import Path
 from typing import Optional
 
 import click
 import pandas as pd
 from environs import Env
+from jinjasql import JinjaSql
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 
@@ -27,10 +29,40 @@ def get_conn() -> Engine:
 
 
 def get_df(conn: Engine, table_name: str, trackercode: str) -> pd.DataFrame:
+
+
     df = pd.read_sql_query(
-        f"SELECT * FROM obis.{table_name} WHERE trackercode='{trackercode}'",
+        f"SELECT fieldnumber, latitude, longitude, datecollected, monthcollected FROM obis.{table_name} WHERE trackercode='{trackercode}'",
         conn,
-        parse_dates=['datelastmodified', 'datecollected']
+        parse_dates=['datecollected']
+    )
+
+    return df
+
+
+def get_df_with_species(conn: Engine, table_name: str, trackercode: str) -> pd.DataFrame:
+    template = """
+        SELECT t1.fieldnumber, t1.latitude, t1.longitude, t1.datecollected, t1.monthcollected, t1.relatedcatalogitem, t2.scientificname, t2.commonname, t3.aphiaidaccepted AS aphiaid
+        FROM obis.{{ table_name|sqlsafe }} t1
+        LEFT JOIN obis.otn_animals t2 ON t1.relatedcatalogitem = t2.catalognumber
+        LEFT JOIN obis.scientificnames t3 ON t2.scientificname = t3.scientificname
+        WHERE trackercode={{ trackercode }}
+    """
+
+    j = JinjaSql(param_style='pyformat')
+    query, bind_params = j.prepare_query(
+        template,
+        {
+            'table_name': table_name,
+            'trackercode': trackercode
+        }
+    )
+
+    df = pd.read_sql_query(
+        query,
+        conn,
+        params=bind_params,
+        parse_dates=['datecollected']
     )
 
     return df
@@ -44,20 +76,21 @@ def cli():
 @click.command()
 @click.argument('trackercode')
 @click.argument('year')
-def get_all_tables(trackercode: str, year: str, conn: Optional[Engine] = None):
+def do_get_all_tables(trackercode: str, year: str, path: str, conn: Optional[Engine] = None):
+    get_all_tables(trackercode, year, path, conn=conn)
+
+def get_all_tables(trackercode: str, year: str, path: str, conn: Optional[Engine] = None):
     if not conn:
         conn = get_conn()
 
     table_name = f"otn_detections_{year}"
 
-    print("table:", table_name)
-    df = get_df(conn, table_name, trackercode)
-    print(len(df))
+    print("get_all_tables: table:", table_name, file=sys.stderr)
+    df = get_df_with_species(conn, table_name, trackercode)
+    print("get_all_tables: length", len(df), file=sys.stderr)
 
-    # @TODO: path
-    filename = f"data/{trackercode}_{year}.csv"
-    print("->", filename)
-    df.to_csv(filename)
+    print("get_all_tables ->", path, file=sys.stderr)
+    df.to_csv(path)
 
 
 @click.command()
@@ -74,7 +107,7 @@ def combine_projects(trackercode: str):
     all_df.to_csv(f"data/{trackercode}.csv")
 
 
-cli.add_command(get_all_tables)
+cli.add_command(do_get_all_tables)
 cli.add_command(combine_projects)
 
 

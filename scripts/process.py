@@ -1,14 +1,18 @@
 import json
 import math
+import os
+import sys
 from functools import cache, singledispatch
+from io import BytesIO
 from pathlib import PosixPath as Path
-from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import click
 import numpy as np
 import pandas as pd
 import geojson
 import geopandas
+import orjson
 import pyvisgraph as vg
 from shapely.geometry import asPolygon, box, LineString, MultiPoint, Point, Polygon, MultiPolygon, geo
 from shapely.geometry.base import BaseGeometry
@@ -24,6 +28,12 @@ try:
     from hull import ConcaveHull
 except ImportError:
     from .hull import ConcaveHull
+    
+from .fetch import get_all_tables
+
+
+# @TODO: CONFIG
+DATADIR = os.environ.get('AST_DATA_DIR', 'data')
 
 
 # transform functions
@@ -135,11 +145,17 @@ def animal_interpolated_paths(df: pd.DataFrame, interp_method: str="simple", max
     animal_tracks: List[pd.DataFrame] = []
 
     for name, df_group in tqdm(grouped_df, desc="Animal Daily Position"):
-        # print(name)
         gdf = df_group.set_index('datecollected')
 
+        assign_vals = {
+            'fieldnumber': name,
+            'commonname': gdf.iloc[0].at['commonname'],
+            'scientificname': gdf.iloc[0].at['scientificname'],
+            'aphiaid': gdf.iloc[0].at['aphiaid']
+        }
+
         # resample on days, average the location of that day, drop empty days
-        gdf = gdf.resample('D').mean().dropna().assign(fieldnumber=name)
+        gdf = gdf.resample('D').mean().dropna().assign(**assign_vals)
 
         # determine gaps in days
         diffs = gdf.index.to_series().diff().astype('timedelta64[D]')    # first row is always NaT
@@ -147,14 +163,11 @@ def animal_interpolated_paths(df: pd.DataFrame, interp_method: str="simple", max
         # get all location indicies that match the days we have to fill in
         end_idxs = [i for i, v in enumerate(diffs.between(1.0, float(max_day_gap), inclusive=False).to_list()) if v]
 
-        # print("Gaps:", len(end_idxs))
-
         # end idxs refers to the integer-location based index of the END of the date range
         # the beginning of the date range is the index directly before it
         add_dfs = []
 
         for i, end_idx in enumerate(tqdm(end_idxs, desc="Filling gaps")):
-            # print("\t", i)
             begin = gdf.iloc[end_idx - 1]
             end = gdf.iloc[end_idx]
 
@@ -166,7 +179,7 @@ def animal_interpolated_paths(df: pd.DataFrame, interp_method: str="simple", max
                 interp_df = pd.DataFrame({
                     'longitude': [begin.longitude] * (len(date_range) - 2),
                     'latitude': [begin.latitude] * (len(date_range) - 2),
-                }, index=date_range[1:-1]).assign(fieldnumber=name)
+                }, index=date_range[1:-1]).assign(**assign_vals)
 
                 add_dfs.append(interp_df)
                 continue
@@ -185,7 +198,7 @@ def animal_interpolated_paths(df: pd.DataFrame, interp_method: str="simple", max
             interp_df = pd.DataFrame({
                 'longitude': interp_lons,
                 'latitude': interp_lats,
-            }, index=date_range[1:-1]).assign(fieldnumber=name)
+            }, index=date_range[1:-1]).assign(**assign_vals)
 
             add_dfs.append(interp_df)
 
@@ -316,10 +329,24 @@ def _match_with_grid(animal_gdf: geopandas.GeoDataFrame, bounds, resolution: int
     @param 
     # gdf is geopandas dataframe wrapped around shapely geometry for each animal,
     """
+    print("    Building grid", file=sys.stderr)
     s_grid, _ = make_gridsquares(bounds, resolution=resolution)
 
+    def project_counts(s: pd.Series) -> pd.Series:
+        """
+        Calculates counts of project_codes for each grouped series (each grid square).
+        Turns them into a column per project.
+        """
+        return s['project_code'].value_counts().to_frame('count').T
+
     # join the grid squares with the animal geometry
-    match_counts = geopandas.sjoin(animal_gdf, s_grid).groupby('index_right').size().to_frame('counts')
+    print("    Joining animal tracks with grid", file=sys.stderr)
+    grouped = geopandas.sjoin(animal_gdf, s_grid).groupby('index_right')
+
+    print("    Calculating counts", file=sys.stderr)
+    match_counts = grouped.apply(project_counts)
+    match_counts.reset_index(1, drop=True, inplace=True)    # remove the 'count' index
+    match_counts['counts'] = match_counts.sum(axis=1)
     joined = geopandas.GeoDataFrame(match_counts.join(s_grid, how='outer').fillna(0))
 
     return joined
@@ -556,7 +583,7 @@ def summary_concave(gdf: geopandas.GeoDataFrame, **kwargs) -> BaseGeometry:
         return geopandas.GeoSeries([buffered_geom])
 
     # couldn't do concave? convex is close.
-    print("WARN: could not do concave hull, returning convex")
+    print("WARN: could not do concave hull, returning convex", file=sys.stderr)
     return summary_convex(gdf)
 
 def summary_bbox(gdf: geopandas.GeoDataFrame, **kwargs) -> BaseGeometry:
@@ -575,9 +602,11 @@ def summary_distribution(gdf: geopandas.GeoDataFrame, bounds=None, range_low: fl
     animal_tracks: List[geopandas.GeoDataFrame] = []
 
     # incoming gdf is all daily points in a month for every animal - break it into animals instead, and reindex by datecollected
-    gdfs = gdf.set_index('datecollected').sort_index().groupby('fieldnumber')
+    gdfs = gdf.set_index('datecollected').sort_index().groupby(['project_code', 'fieldnumber'])
 
-    for name, full_gdf in gdfs:
+    for name_pair, full_gdf in gdfs:
+        project_code, name = name_pair
+
         # now, use the same gaps technique to build geojson primitives out of contiguous days
         anim_gjos: List[Feature] = []
 
@@ -608,45 +637,41 @@ def summary_distribution(gdf: geopandas.GeoDataFrame, bounds=None, range_low: fl
                 {
                     'begin': cut_df.index[0].strftime('%Y-%m-%d'),
                     'end': cut_df.index[-1].strftime('%Y-%m-%d'),
-                    'fieldnumber': name
+                    'fieldnumber': name,
+                    'project_code': project_code
                 }
             )
 
             anim_gjos.append(gjo)
 
-        ## CACHE ON DISK
-
-        # anim_fc = FeatureCollection(anim_gjos)
-        # fname = f"tmp/at/lines_vis_{name}.geojson"
-        # print("writing", fname)
-        # to_geojson(anim_fc, fname)
-
-        # full_gdf.set_index(pd.Index([name] * len(full_gdf)), append=True, inplace=True)
         feature_gdf = geopandas.GeoDataFrame.from_features(anim_gjos)
         animal_tracks.append(feature_gdf)
-
-        # animal_line = MultiPoint(geopandas.points_from_xy(full_gdf.longitude, full_gdf.latitude))
-        # fname = f"tmp/at/{name}.geojson"
-        # print("writing", fname)
-        # to_geojson(animal_line, fname)
 
     all_interp_animals = pd.concat(animal_tracks, ignore_index=True)
     all_gdf = geopandas.GeoDataFrame(all_interp_animals, geometry='geometry', crs='EPSG:4326')
 
     # make a grid, join them
-    print("Gridding and matching animal tracks")
+    print("Gridding and matching animal tracks", file=sys.stderr)
     matched_gdf = _match_with_grid(all_gdf, bounds, resolution=10)
 
     # transform to points
     matched_gdf.geometry = matched_gdf.geometry.apply(lambda x: x.centroid)
 
     # build contour polygons
-    print("Building contour polygons")
+    print("Building contour polygons", file=sys.stderr)
     levels = [l for l in range(1, int(matched_gdf['counts'].max()) + 1)]
-    contour_polys = make_contour_polygons(matched_gdf, levels=levels, level_adjust=-0.1, range_low=range_low, range_high=range_high)
+    # _, bins = np.histogram(matched_gdf['counts'], 20)
+    # levels = [b+1 for b in bins]
+    contour_polys = make_contour_polygons(
+        matched_gdf,
+        levels=levels,
+        level_adjust=-0.1,
+        range_low=range_low,
+        range_high=range_high
+    )
 
     # smooth polygons out
-    print("Smoothing contour polygons")
+    print("Smoothing contour polygons", file=sys.stderr)
     smoothed = [smooth_polygon(cpoly) for cpoly in contour_polys]
 
     ret = geopandas.GeoDataFrame.from_features(smoothed, crs=all_gdf.crs)
@@ -668,21 +693,21 @@ def summary_distribution_kde(gdf: geopandas.GeoDataFrame, bounds=None, range_low
     Does a kernel density estimate on all daily animal locations, intersects them with a regular grid of boxes and generates a heatmap of polygons.
     """
     # make a grid, join them
-    print("Gridding and matching animal tracks")
+    print("Gridding and matching animal tracks", file=sys.stderr)
     matched_gdf = _match_with_grid_kde(gdf, bounds, resolution=10)
 
     # transform to points
     matched_gdf.geometry = matched_gdf.geometry.apply(lambda x: x.centroid)
 
     # build contour polygons
-    print("Building contour polygons")
+    print("Building contour polygons", file=sys.stderr)
     counts, levels = np.histogram(matched_gdf['counts'].values, len(gdf['fieldnumber'].unique()))
     levels = [l for l in levels if l > 0.01]
     adjust = round((levels[1] - levels[0]) / 10, 5)
     contour_polys = make_contour_polygons(matched_gdf, levels=levels, level_adjust=adjust, range_low=range_low, range_high=range_high)
 
     # smooth polygons out
-    print("Smoothing contour polygons")
+    print("Smoothing contour polygons", file=sys.stderr)
     smoothed = [smooth_polygon(cpoly) for cpoly in contour_polys]
 
     ret = geopandas.GeoDataFrame.from_features(smoothed, crs=gdf.crs)
@@ -725,26 +750,28 @@ summary_methods = {
 }
 
 
-def build_filename(trackercode: str, year: Union[int, str], month: Union[int, str], *args, lookup_agg: Optional[str]=None, lookup_summary: Optional[str]=None, suffix: str="geojson"):
+def build_cache_name(trackercode: str, species_common_name: str, species_scientific_name: str, species_aphia_id: str, year: Union[int, str], month: Union[int, str], lookup_agg: Optional[str]=None, lookup_summary: Optional[str]=None) -> Dict[str, str]:
     """
-    Makes an output filename.
+    Makes a dict of cacheable discriminant parts.
 
     Can optionally look up the agg/summary parts.
     """
-    file_parts = [
-        trackercode,
-        str(year),
-        str(month),
-        *args
-    ]
+    name = {
+        'project_code': trackercode,
+        'species_common_name': species_common_name,
+        'species_scientific_name': species_scientific_name,
+        'species_aphia_id': species_aphia_id,
+        'year': str(year),
+        'month': str(month),
+    }
 
     if lookup_agg and lookup_agg in agg_methods:
-        file_parts.append(agg_methods[lookup_agg]['discrim'])
+        name['agg'] = agg_methods[lookup_agg]['discrim']
 
     if lookup_summary and lookup_summary in summary_methods:
-        file_parts.append(summary_methods[lookup_summary]['discrim'])
+        name['summary'] = summary_methods[lookup_summary]['discrim']
 
-    return f'{"_".join((f for f in file_parts if f))}.{suffix}'
+    return name
 
 
 @click.command()
@@ -755,11 +782,32 @@ def build_filename(trackercode: str, year: Union[int, str], month: Union[int, st
 @click.argument('summary_method',
                 type=click.Choice(list(summary_methods.keys())))
 @click.option("--month", type=int)
-@click.option("--buffer", type=float)
-@click.option("--simplify", type=float)
-@click.option("--jitter", type=float)
-@click.option("--round-decimals", type=int)
-def process(trackercode: str, year: str, agg_method: str, summary_method: str, month: int, buffer: float, simplify: float, jitter: float, round_decimals: int) -> geopandas.GeoDataFrame:
+@click.option("--buffer", type=float, default=None)
+@click.option("--simplify", type=float, default=None)
+@click.option("--jitter", type=float, default=None)
+@click.option("--round-decimals", type=int, default=None)
+@click.option("--to-disk/--no-to-disk", default=False)
+def do_process(trackercode: str, year: str, agg_method: str, summary_method: str, month: int, buffer: float, simplify: float, jitter: float, round_decimals: int, to_disk: bool):
+    for d in process(
+        trackercode,
+        year,
+        agg_method,
+        summary_method,
+        month=month,
+        buffer=buffer,
+        simplify=simplify,
+        jitter=jitter,
+        round_decimals=round_decimals
+    ):
+        if to_disk:
+            fname = Path('out2') / Path("-".join((v for k, v in d['_metadata'].items())) + ".geojson")
+            print(fname)
+            with open(fname, 'w') as f:
+                json.dump(d, f)
+        else:
+            print(d)
+
+def process(trackercode: str, year: str, agg_method: str, summary_method: str, month: Optional[int]=None, buffer: Optional[float]=None, simplify: Optional[float]=None, jitter: Optional[float]=None, round_decimals: Optional[int]=None) -> Sequence[Dict[str, Any]]:
     agg_callable: Callable[[pd.DataFrame], geopandas.GeoDataFrame] = agg_methods[agg_method]['callable']
     file_discriminant: str = agg_methods[agg_method]['discrim']
 
@@ -767,53 +815,88 @@ def process(trackercode: str, year: str, agg_method: str, summary_method: str, m
     summary_discrim: str = summary_methods[summary_method]['discrim']
 
     df = load_df(trackercode, year, jitter=jitter, round_decimals=round_decimals)
-    gdf = agg_callable(df)
 
-    range_low = -math.inf
-    range_high = math.inf
+    ret_vals: List[Dict[str, Any]] = []
 
-    # for each month:
-    for imonth in [slice(None), *gdf.index.unique()]:
-        is_all = isinstance(imonth, slice)
+    # group by species
+    species_groups = df.groupby(['aphiaid', 'commonname', 'scientificname'])
 
-        if not is_all and (month and imonth != month):
-            continue
+    for species_name_triple, sdf in species_groups:
+        print(species_name_triple, len(sdf), file=sys.stderr)
 
-        ffname = build_filename(
-            trackercode,
-            year,
-            "all" if is_all else imonth,
-            file_discriminant,
-            summary_discrim
-        )
+        gdf = agg_callable(sdf)
+        gdf = gdf.assign(project_code=trackercode)     # provenance for this intermediate data
 
-        fname = f'out/{ffname}'
-        month_df = gdf.loc[imonth]
-        if isinstance(month_df, (pd.Series, geopandas.GeoSeries)):
-            month_df = gdf.loc[[imonth]]    # https://stackoverflow.com/a/20384317
+        range_low = -math.inf
+        range_high = math.inf
 
-        print(fname, len(month_df))
+        species_aphia_id, species_common_name, species_scientific_name = species_name_triple
 
-        try:
-            summary = summary_callable(month_df, bounds=gdf.unary_union.bounds, range_low=range_low, range_high=range_high)
+        # cache the aggregate output for future use (combining with same species from different projects)
+        cachename = f"cache/{trackercode}-{year}-{species_aphia_id}.geojson"
+        to_disk(gdf.reset_index(), cachename)
+        print(cachename, file=sys.stderr)
 
-            # if this is the "all", find the range
-            if is_all:
-                range_low = max(range_low, summary['level'].min())
-                range_high = min(range_high, summary['level'].max())
+        # load other agg cached datasets of the same species
+        agg_data = load_agg_cache(year, species_aphia_id, skip=trackercode)
+        if agg_data:
+            all_agg = pd.concat(agg_data.values()).set_index(['monthcollected'])
+            gdf = pd.concat([gdf, all_agg])
 
-            if buffer:
-                summary = summary.buffer(buffer)
+        # for each month:
+        for imonth in [slice(None), *gdf.index.unique()]:
+            is_all = isinstance(imonth, slice)
 
-            if simplify:
-                summary = summary.simplify(simplify)
+            if not is_all and (month and imonth != month):
+                continue
 
-            to_geojson(summary, fname)
-        except Exception as e:
-            print("EXCEPT", imonth, e)
+            ffname = build_cache_name(
+                # trackercode,
+                "_ALL",
+                species_common_name,
+                species_scientific_name,
+                species_aphia_id,
+                year,
+                "all" if is_all else imonth,
+                file_discriminant,
+                summary_discrim
+            )
 
-            to_geojson(FeatureCollection([]), fname)
-    return gdf
+            month_df = gdf.loc[imonth]
+            if isinstance(month_df, (pd.Series, geopandas.GeoSeries)):
+                month_df = gdf.loc[[imonth]]    # https://stackoverflow.com/a/20384317
+
+            try:
+                summary = summary_callable(month_df,
+                    bounds=gdf.unary_union.bounds,
+                    range_low=range_low,
+                    range_high=range_high,
+                )
+
+                # add metadata about project, species
+                summary['project_codes'] = ", ".join([trackercode, *agg_data.keys()])
+                summary['species_common_name'] = species_common_name
+                summary['species_scientific_name'] = species_scientific_name
+                summary['species_aphia_id'] = species_aphia_id
+
+                # if this is the "all", find the range
+                if is_all:
+                    range_low = max(range_low, summary['level'].min())
+                    range_high = min(range_high, summary['level'].max())
+
+                if buffer:
+                    summary = summary.buffer(buffer)
+
+                if simplify:
+                    summary = summary.simplify(simplify)
+
+                ret_vals.append(to_geojson(summary, **ffname))
+            except Exception as e:
+                print("EXCEPT", imonth, e, file=sys.stderr)
+
+                ret_vals.append(to_geojson(FeatureCollection([]), **ffname))
+
+    return ret_vals
 
 
 def load_df(trackercode: str, year: str, trim: bool=True, jitter: Optional[float]=None, round_decimals: Optional[int]=None, extra_cols: Optional[List[str]]=None) -> geopandas.GeoSeries:
@@ -821,13 +904,33 @@ def load_df(trackercode: str, year: str, trim: bool=True, jitter: Optional[float
         'parse_dates': ['datelastmodified', 'datecollected']
     } 
     if trim:
-        kwargs['usecols'] = ['fieldnumber', 'latitude', 'longitude', 'datecollected', 'monthcollected']
+        kwargs['usecols'] = ['fieldnumber', 'latitude', 'longitude', 'datecollected', 'monthcollected', 'scientificname', 'commonname', 'aphiaid']
         if extra_cols is not None:
             kwargs['usecols'].extend(extra_cols)
 
         kwargs['parse_dates'] = ['datecollected']
 
-    df = pd.read_csv(f"data/{trackercode}_{year}.csv",
+    need = True
+    p = Path(DATADIR) / Path(f"{trackercode}_{year}.csv")
+    if p.exists():
+        # verify they have the species
+        try:
+            sdf = pd.read_csv(p, nrows=2, **kwargs)
+            if 'aphiaid' in sdf.columns:
+                need = False
+        except ValueError as e:
+            if not "columns expected but not found" in str(e):
+                raise
+                
+        if need:
+            print(f"load_df({trackercode},{year}): no species info, re-loading from db", file=sys.stderr)
+
+    if need:
+        get_all_tables(trackercode=trackercode, year=year, path=str(p))
+
+    assert p.exists()
+
+    df = pd.read_csv(p,
         **kwargs
     )
     df['weekcollected'] = df['datecollected'].dt.isocalendar().week
@@ -850,10 +953,57 @@ def get_convex_hull(gdf) -> geopandas.GeoSeries:
 
     return hull
 
-def to_geojson(geoobj, filename: str):
-    with open(filename, "w") as f:
-        data = geoobj.__geo_interface__ if hasattr(geoobj, '__geo_interface__') else geoobj.to_json()
-        json.dump(data, f)
+def to_geojson(geoobj, **kwargs) -> Dict[str, Any]:
+    data = geoobj.__geo_interface__ if hasattr(geoobj, '__geo_interface__') else geoobj.to_json()
+    data['_metadata'] = kwargs
+
+    #return json.dumps(data, separators=(',', ':'))
+    return data
+
+
+def to_disk(geoobj, fname: str, **kwargs):
+    def def_dt(obj):
+        if isinstance(obj, pd.Timestamp):
+            return obj.to_pydatetime()
+        raise TypeError
+
+    geojson = to_geojson(geoobj, **kwargs)
+    serialized = orjson.dumps(
+        geojson,
+        default=def_dt,
+        option=orjson.OPT_SERIALIZE_NUMPY
+    )
+    with open(fname, "wb") as f:
+        f.write(serialized)
+        
+        #json.dump(geojson, f)
+
+
+#agg_data = load_agg_cache(year, species_aphia_id, skip=trackercode)
+
+def load_agg_cache(year: str, species_aphia_id: str, skip: str=None) -> Dict[str, geopandas.GeoDataFrame]:
+    """
+    Loads all matching year/aphia_id aggregate caches from disk.
+    Returns a dict of project code -> geodataframe.
+    """
+    ret: Dict[str, geopandas.GeoDataFrame] = {}
+
+    p = Path("cache")
+    for pp in p.glob(f'*-{year}-{species_aphia_id}.geojson'):
+        pproject, pyear, paphia = pp.stem.split('-')
+        if pproject == skip:
+            continue
+
+        bio = None
+        with pp.open('rb') as f:
+            bio = BytesIO(f.read())
+            bio.seek(0)
+
+        jsondata = orjson.loads(bio.getvalue())
+        ret[pproject] = geopandas.GeoDataFrame.from_features(jsondata['features'])
+        ret[pproject].datecollected = ret[pproject].datecollected.apply(pd.Timestamp)
+
+    return ret
 
 
 def cmocean_to_mapbox(cmap, inc=0.1):
@@ -867,7 +1017,5 @@ def cmocean_to_mapbox(cmap, inc=0.1):
     return out
 
 
-
-
 if __name__ == "__main__":
-    process()
+    do_process()

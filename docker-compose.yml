@@ -1,0 +1,11 @@
+version: '3.2'
+networks:
+  default:
+    external:
+      name: axds
+services:
+  redis:
+    image: redis:6.2.1-alpine
+    command: redis-server --requirepass atp
+    ports:
+      - '127.0.0.1:${ATP_REDIS_PORT:-46379}:6379'

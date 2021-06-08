@@ -6,11 +6,14 @@ import click
 from process import build_filename, process
 
 aggsums = [
-    ('raw', 'raw'),
-    ('raw', 'concave_hull'),
-    ('raw', 'convex_hull'),
-    ('raw', 'rotated_bbox'),
-    ('animal_boxes', 'raw')
+    # ('raw', 'raw'),
+    # ('raw', 'concave_hull'),
+    # ('raw', 'convex_hull'),
+    # ('raw', 'rotated_bbox'),
+    # ('animal_boxes', 'raw')
+    ('animal_interpolated_paths', 'distribution'),
+    ('animal_interpolated_paths', 'distribution_buffered'),
+    ('animal_interpolated_paths', 'distribution_kde'),
 ]
 
 @click.command()
@@ -59,7 +62,6 @@ def make(ctx):
                         'agg_method': agg,
                         'summary_method': summ,
                         'round_decimals': 2,
-                        'buffer': 0.25 if not (agg == "raw" and summ == "raw") else None,
                     }
                 )
             else:
@@ -70,7 +72,6 @@ def make(ctx):
                             'year': year,
                             'agg_method': agg,
                             'summary_method': summ,
-                            'buffer': 0.25,
                             'round_decimals': 2,
                             'month': month
                         }
