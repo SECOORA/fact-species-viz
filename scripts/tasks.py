@@ -9,7 +9,7 @@ from celery import Celery
 from .log import logger
 from .config import CONFIG
 from .utils import ATPType, get_atp_cache_key
-from .cache import write_cache
+from .cache import write_cache, update_species_common_name, update_species_scientific_name
 
 from .process import process
 
@@ -68,6 +68,14 @@ def run_atp_process(project_code: str, year: int, type: ATPType, month: Optional
         #         ret_val = d
         #     elif not month and metadata_month == 'all':
         #         ret_val = d
+
+        # update species info
+        species_aphia_id = d['_metadata'].get('species_aphia_id')
+        species_common_name = d['_metadata'].get('species_common_name')
+        species_scientific_name = d['_metadata'].get('species_scientific_name')
+
+        update_species_common_name(species_aphia_id, species_common_name)
+        update_species_scientific_name(species_aphia_id, species_scientific_name)
 
         del d['_metadata']
 

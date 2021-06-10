@@ -153,7 +153,7 @@ function GLMap(props) {
       setStyles(newStyles);
       setLayerData(data);
       setAllBBox(newAllBBox);
-      zoomToExtents(newAllBBox);
+      // zoomToExtents(newAllBBox);
     }).catch(e => {
       setNoData(true);
       setNoDataReason(e.toString());

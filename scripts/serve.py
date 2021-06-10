@@ -1,14 +1,23 @@
 from typing import Optional
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from . import tasks
-from .cache import read_cache
+from .cache import read_cache, get_species_ids, get_species_months, get_species_years
 from .log import logger
 from .utils import ATPType, get_atp_cache_key
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost", "http://localhost:1234"],    # @TODO: uh more urls here
+    allow_credentials=True,
+    allow_methods=['*'],
+    allow_headers=['*']
+)
+
 
 @app.post('/atp/{project_code}/{type}/{year}')
 async def process_atp_project(project_code: str, year: int, type: ATPType):
@@ -25,6 +34,25 @@ async def process_atp_project(project_code: str, year: int, type: ATPType):
     ret_val = res.get()
 
     return ret_val
+
+
+@app.get('/atp/species')
+async def get_species():
+    """
+    Gets list of species aphia ids.
+    """
+    return get_species_ids()
+
+
+@app.get('/atp/species/{aphia_id}/years')
+async def species_years(aphia_id: int):
+    return get_species_years(aphia_id)
+
+
+@app.get('/atp/species/{aphia_id}/{year}')
+async def species_months(aphia_id: int, year: int):
+    return get_species_months(aphia_id, year)
+
 
 @app.get('/atp/{aphia_id}/{type}/{year}')
 async def get_atp_data(aphia_id: int, year: int, type: ATPType, month: Optional[int] = None):

@@ -11,6 +11,7 @@
     "@turf/center": "^6.0.1",
     "@turf/centroid": "^6.0.2",
     "@turf/point-to-line-distance": "^6.0.0",
+    "axios": "^0.21.1",
     "chroma-js": "^2.1.0",
     "classnames": "^2.2.6",
     "d3": "^5.15.0",

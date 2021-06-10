@@ -1,6 +1,6 @@
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 import click
 import pandas as pd
@@ -8,6 +8,9 @@ from environs import Env
 from jinjasql import JinjaSql
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
+from tqdm import tqdm
+
+from .log import logger
 
 
 def get_conn() -> Engine:
@@ -40,15 +43,19 @@ def get_df(conn: Engine, table_name: str, trackercode: str) -> pd.DataFrame:
     return df
 
 
-def get_df_with_species(conn: Engine, table_name: str, trackercode: str) -> pd.DataFrame:
+def get_df_with_species(conn: Engine, table_name: str, trackercode: str, bin_size: int=10000) -> pd.DataFrame:
+    # template = """
+    #     SELECT t1.fieldnumber, t1.latitude, t1.longitude, t1.datecollected, t1.monthcollected, t1.relatedcatalogitem, t2.scientificname, t2.commonname, t3.aphiaidaccepted AS aphiaid
+    #     FROM obis.{{ table_name|sqlsafe }} t1
+    #     LEFT JOIN obis.otn_animals t2 ON t1.relatedcatalogitem = t2.catalognumber
+    #     LEFT JOIN obis.scientificnames t3 ON t2.scientificname = t3.scientificname
+    #     WHERE trackercode={{ trackercode }}
+    # """
     template = """
-        SELECT t1.fieldnumber, t1.latitude, t1.longitude, t1.datecollected, t1.monthcollected, t1.relatedcatalogitem, t2.scientificname, t2.commonname, t3.aphiaidaccepted AS aphiaid
+        SELECT COUNT(t1.*)
         FROM obis.{{ table_name|sqlsafe }} t1
-        LEFT JOIN obis.otn_animals t2 ON t1.relatedcatalogitem = t2.catalognumber
-        LEFT JOIN obis.scientificnames t3 ON t2.scientificname = t3.scientificname
         WHERE trackercode={{ trackercode }}
     """
-
     j = JinjaSql(param_style='pyformat')
     query, bind_params = j.prepare_query(
         template,
@@ -58,14 +65,69 @@ def get_df_with_species(conn: Engine, table_name: str, trackercode: str) -> pd.D
         }
     )
 
-    df = pd.read_sql_query(
+    cdf = pd.read_sql_query(
         query,
         conn,
         params=bind_params,
-        parse_dates=['datecollected']
+    )
+    row_count = cdf.iat[0, 0]
+
+    # get number of chunks we will request
+    chunk_count = (row_count // bin_size) + 1
+
+    template = """
+        SELECT t1.fieldnumber, t1.latitude, t1.longitude, t1.datecollected, t1.monthcollected, t1.relatedcatalogitem
+        FROM obis.{{ table_name|sqlsafe }} t1
+        WHERE trackercode={{ trackercode }}
+    """
+    query, bind_params = j.prepare_query(
+        template,
+        {
+            'table_name': table_name,
+            'trackercode': trackercode
+        }
     )
 
-    return df
+    frames: List[pd.DataFrame] = []
+    with tqdm(total=chunk_count, desc="Running SQL Query") as progress_bar:
+        for chunk_df in pd.read_sql_query(
+                query,
+                conn,
+                params=bind_params,
+                parse_dates=['datecollected'],
+                chunksize=bin_size
+            ):
+            progress_bar.update(1)
+            frames.append(chunk_df)
+
+    df = pd.concat(frames)
+
+    # join with species info
+    relcatalogitems = list(df['relatedcatalogitem'].unique())
+    logger.info("get_df_with_species: %d unique animals", len(relcatalogitems))
+
+    template = """
+        SELECT t2.catalognumber, t2.scientificname, t2.commonname, t3.aphiaidaccepted AS aphiaid
+        FROM obis.otn_animals t2
+        LEFT JOIN obis.scientificnames t3 ON t2.scientificname = t3.scientificname
+        WHERE catalognumber IN {{ related_catalog_items|inclause }}
+    """
+    query, bind_params = j.prepare_query(
+        template,
+        {
+            'related_catalog_items': relcatalogitems
+        }
+    )
+    
+    species_df = pd.read_sql_query(
+        query,
+        conn,
+        params=bind_params,
+    ).drop_duplicates()     # otn_animals has multiple entries for each catalog item with notes (i guess?), we only select columns that should be the same
+
+    # merge species info with detections
+    merged_df = pd.merge(df, species_df, left_on='relatedcatalogitem', right_on='catalognumber').drop(columns=['relatedcatalogitem', 'catalognumber'])
+    return merged_df
 
 
 @click.group()

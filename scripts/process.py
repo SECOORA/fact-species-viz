@@ -659,9 +659,14 @@ def summary_distribution(gdf: geopandas.GeoDataFrame, bounds=None, range_low: fl
 
     # build contour polygons
     print("Building contour polygons", file=sys.stderr)
-    levels = [l for l in range(1, int(matched_gdf['counts'].max()) + 1)]
-    # _, bins = np.histogram(matched_gdf['counts'], 20)
-    # levels = [b+1 for b in bins]
+    level_count = int(matched_gdf['counts'].max())
+
+    if level_count > 30:
+        _, bins = np.histogram(matched_gdf['counts'], 30)
+        levels = [b+1 for b in bins]
+    else:
+        levels = [l for l in range(1, level_count + 1)]
+
     contour_polys = make_contour_polygons(
         matched_gdf,
         levels=levels,

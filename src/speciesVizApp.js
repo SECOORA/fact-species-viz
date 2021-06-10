@@ -1,16 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import ReactDOM from "react-dom";
 import {useLocation, useHistory} from 'react-router';
+import axios from "axios";
+import _ from 'lodash';
 
-import MapGrid from "./mapgrid.js"
+import DistMap from "./distMap.js"
 import Chooser from "./chooser.js";
-
-const trackercodes = [
-  'BLKTP',
-  'FLKEYST',
-  'FSUGG',
-  'TQCS'
-]
 
 const useQuery = () => {
   return new URLSearchParams(useLocation().search);
@@ -22,17 +17,21 @@ function SpeciesVizApp(props) {
     location = useLocation(),
     history = useHistory();
 
-  const [trackerCode, setTrackerCode] = useState(query.get('project') || 'BLKTP');
+  const [allAphiaIds, setAllAphiaIds] = useState([]);
+  const [allSpeciesNames, setAllSpeciesNames] = useState([]);
+  const [aphiaId, setAphiaId] = useState(parseInt(query.get('aphiaId')) || 105793)
   const [month, setMonth] = useState(query.get('month') || 'all');
   const [year, setYear] = useState(query.get('year') || 2019);
+  const [availYears, setAvailYears] = useState([]);
+  const [availMonths, setAvailMonths] = useState([]);
 
   const buildQueryString = (newArgs) => {
-    let {newMonth = month, newYear = year, newProject = trackerCode} = newArgs;
+    let {newMonth = month, newYear = year, newAphiaId = aphiaId} = newArgs;
 
     let vals = {
       month: newMonth,
       year: newYear,
-      project: newProject
+      aphiaId: newAphiaId
     }
 
     let kvp = Object.entries(vals).map(kv => kv.join("=")).join("&");
@@ -43,8 +42,9 @@ function SpeciesVizApp(props) {
 
   // handle any url params controlling state
   useEffect(() => {
-    if (query.has("project")) {
-      setTrackerCode(query.get("project"));
+    if (query.has("aphiaId")) {
+      const aphiaId = parseInt(query.get("aphiaId"));
+      setAphiaId(aphiaId);
     }
 
     if (query.has("month")) {
@@ -82,48 +82,60 @@ function SpeciesVizApp(props) {
     setMonth(newMonth);
   }
 
-  const _setProject = (newProject) => {
+  const _setAphiaId = (newAphiaId) => {
     history.push(
       {
         pathname: location.pathname,
-        search: buildQueryString({newProject: newProject})
+        search: buildQueryString({newAphiaId: newAphiaId})
       }
     )
 
-    setTrackerCode(newProject);
+    setAphiaId(newAphiaId);
   }
+
+  useEffect(() => {
+    async function getAphiaIds() {
+      const response = await axios.get(`${process.env.DATA_URL}/atp/species`);
+      const [aphiaIds, names] = _.unzip(_.map(response.data, (v, k) => [parseInt(k), v]));
+      setAllAphiaIds(aphiaIds);
+      setAllSpeciesNames(names);
+    }
+
+    getAphiaIds();
+  }, []);
+
+  useEffect(() => {
+    async function getYears() {
+      const response = await axios.get(`${process.env.DATA_URL}/atp/species/${aphiaId}/years`);
+      setAvailYears(response.data)
+    }
+
+    getYears();
+  }, [aphiaId])
+
+  useEffect(() => {
+    async function getMonths() {
+      const response = await axios.get(`${process.env.DATA_URL}/atp/species/${aphiaId}/${year}`);
+      setAvailMonths(response.data)
+    }
+
+    getMonths();
+  }, [aphiaId, year])
 
   return (
     <div className="mr-12">
-      <div className="absolute top-0 right-0 bg-gray-200 text-sm mr-2 p-2 border border-gray-100">
-        <h5 className="font-bold uppercase text-gray-500">Notes</h5>
-        <p>General data availability:</p>
-        <ul>
-          <li>
-            <strong>BLKTP:</strong> 2009-2020
-          </li>
-          <li>
-            <strong>FLKEYST:</strong> 2010, 2012, 2014-2019
-          </li>
-          <li>
-            <strong>FSUGG:</strong> 2010-2019
-          </li>
-          <li>
-            <strong>TQCS:</strong> 2009-2011
-          </li>
-        </ul>
-      </div>
       <nav>
         <h1 className="text-2xl ml-24 mb-2 pl-1">
           <a href="/">
-            FACT <span className="line-through">RANGE</span> DISTRIBUTION TESTBED
+            FACT DaViT
           </a>
         </h1>
         <Chooser
-          items={trackercodes}
-          onClick={_setProject}
-          curVal={trackerCode}
-          label="Project"
+          items={allAphiaIds}
+          labels={allSpeciesNames}
+          onClick={_setAphiaId}
+          curVal={aphiaId}
+          label="Species"
         />
 
         <Chooser
@@ -141,6 +153,7 @@ function SpeciesVizApp(props) {
             2019,
             2020,
           ]}
+          enabledItems={availYears}
           onClick={_setYear}
           curVal={year}
           label="Year"
@@ -150,26 +163,17 @@ function SpeciesVizApp(props) {
           items={[...Array(12).keys(), "all"].map((m) =>
             m !== "all" ? m + 1 : m
           )}
+          enabledItems={[...availMonths, "all"]}
           onClick={_setMonth}
           curVal={month}
           label="Month"
         />
       </nav>
-      <MapGrid
-        trackercode={trackerCode}
-        years={[year]}
-        months={[month]}
+      <DistMap
+        aphiaId={aphiaId}
+        year={year}
+        month={month}
         mapHeight={700}
-        variants={[
-          // "FULL",
-          // "FULL_concave",
-          // "FULL_convex",
-          // "FULL_rbbox",
-          // "ANIM_BOXES",
-          "ANIM_PATHS_dist",
-          "ANIM_PATHS_dist_buffered",
-          "ANIM_PATHS_dist_kde",
-        ]}
       />
     </div>
   );

@@ -118,18 +118,24 @@ function MapGrid(props) {
         variant,
         props.years.flatMap((y) => {
           return props.months.flatMap((m) => {
-            return `${props.trackercode}_${y}_${m}_${variant}`;
+            return {
+              aphiaId: props.aphiaId,
+              year: y,
+              month: m,
+              type: variant
+
+            } //`${props.trackercode}_${y}_${m}_${variant}`;
           });
         }),
       ];
     })
 
     return Object.fromEntries(variantPairs);
-  }, [props.months, props.variants, props.trackercode, props.years]);
+  }, [props.months, props.variants, props.aphiaId, props.years]);
 
   return (
     <div className="mapgrid">
-      {(props.variants || DEFAULT_VARIANTS).map((k) => {
+      {(props.variants || DEFAULT_VARIANTS).map((k, kk) => {
         return (
           <div className="relative" style={{ maxHeight: mapHeight }} key={k}>
             <h3 className="absolute top-0 left-0 font-bold z-50">{k}</h3>
@@ -140,7 +146,7 @@ function MapGrid(props) {
               mapWidth={mapHeight}
               maxZoom={4}
               layerSources={{
-                url: `${process.env.DATA_URL}/${keys[k]}.geojson`,
+                url: `${process.env.DATA_URL}/atp/${keys[k].aphiaId}/${keys[k].type}/${keys[k].year}?month=${keys[k].month}`,
                 transform: (d) => {
                   let data;
 
@@ -150,7 +156,7 @@ function MapGrid(props) {
 
                   const catalog = d.features.map((feat, idx) => {
                     return {
-                      key: `${k}-${idx}`,
+                      key: `${kk}-${idx}`,
                       boundingBox: bbox(feat),
                       data: {
                         range: feat
@@ -173,7 +179,7 @@ function MapGrid(props) {
                   // ];
 
                   return {
-                    name: k,
+                    name: kk,
                     styles: {
                       range: {
                         normal: normalStyle,
