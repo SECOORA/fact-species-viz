@@ -3,17 +3,7 @@ import ReactDOM from "react-dom";
 import bbox from "@turf/bbox";
 
 import GLMap from "./glmap.js";
-import { fillThermal, oranges } from "./palettes.js";
-
-
-const normalStyle = {
-  type: "fill",
-
-  paint: {
-    "fill-opacity": 0.5,
-    "fill-color": ["interpolate", ["linear"], ["get", "local_pct"], ...fillThermal],
-  },
-};
+import Palettes from "./palettes.js";
 
 const pointStyle = {
   type: "circle",
@@ -38,10 +28,27 @@ function DistMap(props) {
     
   }, [props.aphiaId, props.year, props.month]);
 
+  const normalStyle = useMemo(() => {
+    return {
+      type: "fill",
+
+      paint: {
+        "fill-opacity": 0.5,
+        "fill-color": [
+          "interpolate",
+          ["linear"],
+          ["get", "local_pct"],
+          ...Palettes[props.palette || "thermal"],
+        ],
+      },
+    };
+  }, [props.palette]);
+
   return (
     <GLMap
       idField="key"
       mapStyle="mapbox://styles/mz4/ck6m8v8x9052n1iphvif4ilra"
+      // mapStyle="mapbox://styles/mz4/ck6kzovim17x91iqv3rv1h7u4"
       mapHeight={mapHeight}
       mapWidth={mapHeight}
       maxZoom={4}

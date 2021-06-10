@@ -6,6 +6,7 @@ import _ from 'lodash';
 
 import DistMap from "./distMap.js"
 import Chooser from "./chooser.js";
+import Palettes from "./palettes.js";
 
 const useQuery = () => {
   return new URLSearchParams(useLocation().search);
@@ -24,6 +25,7 @@ function SpeciesVizApp(props) {
   const [year, setYear] = useState(query.get('year') || 2019);
   const [availYears, setAvailYears] = useState([]);
   const [availMonths, setAvailMonths] = useState([]);
+  const [palette, setPalette] = useState('thermal');
 
   const buildQueryString = (newArgs) => {
     let {newMonth = month, newYear = year, newAphiaId = aphiaId} = newArgs;
@@ -168,12 +170,20 @@ function SpeciesVizApp(props) {
           curVal={month}
           label="Month"
         />
+
+        <Chooser
+          items={Object.keys(Palettes)}
+          onClick={setPalette}
+          curVal={palette}
+          label="Palette"
+        />
       </nav>
       <DistMap
         aphiaId={aphiaId}
         year={year}
         month={month}
         mapHeight={700}
+        palette={palette}
       />
     </div>
   );
