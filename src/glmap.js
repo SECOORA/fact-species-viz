@@ -21,8 +21,8 @@ function GLMap(props) {
     */
   });
 
-  const [styles, setStyles] = useState({});
-  const [layerData, setLayerData] = useState({});
+  // const [styles, setStyles] = useState(props.styles || {});
+  // const [layerData, setLayerData] = useState(props.layerData || {});
   const [allBBox, setAllBBox] = useState(null);
   const [noData, setNoData] = useState(false);
   const [noDataReason, setNoDataReason] = useState(null);
@@ -162,6 +162,9 @@ function GLMap(props) {
     });
   }, [props.layerSources]);
 
+  // TODO: useEffect on layerData changes to calculate allbbox
+  // TODO: allBbox should be a memo calc on layerData
+
   return (
     <div className="glmap-container">
       <div className="glmap-internal-container">
@@ -172,7 +175,7 @@ function GLMap(props) {
               mapStyle={props.mapStyle || mapstyle}
               // onClick={onMapClick}
               interactiveLayerIds={
-                props.interactiveLayerIds || Object.keys(layerData)
+                props.interactiveLayerIds || Object.keys(props.layerData || {})
               }
               // onHover={onMapHover}
               onViewportChange={setViewport}
@@ -182,7 +185,7 @@ function GLMap(props) {
                 <NavigationControl />
               </div> */}
 
-              {Object.entries(layerData).map(([layerName, fc]) => {
+              {Object.entries(props.layerData || {}).map(([layerName, fc]) => {
                 return (
                   <Source
                     id={layerName}
@@ -193,14 +196,14 @@ function GLMap(props) {
                     {/*
                      * The invisible layer used for interactiveLayers in mapbox.  Always present, never visible.
                      */}
-                    <Layer id={layerName} {...styles[layerName].normal} />
+                    <Layer id={layerName} {...props.styles[layerName].normal} />
 
                     {/*
                      * "Normal" - on when nothing hovered or selected.
                      */}
                     <Layer
                       id={layerName + "normal"}
-                      {...styles[layerName].normal}
+                      {...props.styles[layerName].normal}
                     />
                   </Source>
                 );
