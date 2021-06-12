@@ -838,68 +838,93 @@ def process(trackercode: str, year: str, agg_method: str, summary_method: str, m
         species_aphia_id, species_common_name, species_scientific_name = species_name_triple
 
         # cache the aggregate output for future use (combining with same species from different projects)
+        # TODO: can this go in redis somehow
         cachename = f"cache/{trackercode}-{year}-{species_aphia_id}.geojson"
         to_disk(gdf.reset_index(), cachename)
         print(cachename, file=sys.stderr)
+
+        frames_and_metadata = [
+            (gdf, [trackercode])
+        ]
+        has_multiple = False
 
         # load other agg cached datasets of the same species
         agg_data = load_agg_cache(year, species_aphia_id, skip=trackercode)
         if agg_data:
             all_agg = pd.concat(agg_data.values()).set_index(['monthcollected'])
-            gdf = pd.concat([gdf, all_agg])
+            agg_gdf = pd.concat([gdf, all_agg])
 
-        # for each month:
-        for imonth in [slice(None), *gdf.index.unique()]:
-            is_all = isinstance(imonth, slice)
-
-            if not is_all and (month and imonth != month):
-                continue
-
-            ffname = build_cache_name(
-                # trackercode,
-                "_ALL",
-                species_common_name,
-                species_scientific_name,
-                species_aphia_id,
-                year,
-                "all" if is_all else imonth,
-                file_discriminant,
-                summary_discrim
+            frames_and_metadata.append(
+                (agg_gdf, [trackercode, *agg_data.keys()])
             )
+            has_multiple = True
 
-            month_df = gdf.loc[imonth]
-            if isinstance(month_df, (pd.Series, geopandas.GeoSeries)):
-                month_df = gdf.loc[[imonth]]    # https://stackoverflow.com/a/20384317
+        for cur_df, cur_metadata in frames_and_metadata:
+            # for each month:
+            for imonth in [slice(None), *cur_df.index.unique()]:
+                is_all = isinstance(imonth, slice)
 
-            try:
-                summary = summary_callable(month_df,
-                    bounds=gdf.unary_union.bounds,
-                    range_low=range_low,
-                    range_high=range_high,
-                )
+                if not is_all and (month and imonth != month):
+                    continue
 
-                # add metadata about project, species
-                summary['project_codes'] = ", ".join([trackercode, *agg_data.keys()])
-                summary['species_common_name'] = species_common_name
-                summary['species_scientific_name'] = species_scientific_name
-                summary['species_aphia_id'] = species_aphia_id
+                ffname = {
+                    'project_code': '_ALL' if len(cur_metadata) > 1 else cur_metadata[0],
+                    'species_common_name': species_common_name,
+                    'species_scientific_name': species_scientific_name,
+                    'species_aphia_id': species_aphia_id,
+                    'year': str(year),
+                    'month': "all" if is_all else str(imonth),
+                    # file_discriminant,
+                    # summary_discrim
+                }
 
-                # if this is the "all", find the range
-                if is_all:
-                    range_low = max(range_low, summary['level'].min())
-                    range_high = min(range_high, summary['level'].max())
+                month_df = cur_df.loc[imonth]
+                if isinstance(month_df, (pd.Series, geopandas.GeoSeries)):
+                    month_df = cur_df.loc[[imonth]]    # https://stackoverflow.com/a/20384317
 
-                if buffer:
-                    summary = summary.buffer(buffer)
+                try:
+                    summary = summary_callable(month_df,
+                        bounds=cur_df.unary_union.bounds,
+                        range_low=range_low,
+                        range_high=range_high,
+                    )
 
-                if simplify:
-                    summary = summary.simplify(simplify)
+                    # add metadata about project, species
+                    summary['project_codes'] = ", ".join(cur_metadata)
+                    summary['species_common_name'] = species_common_name
+                    summary['species_scientific_name'] = species_scientific_name
+                    summary['species_aphia_id'] = species_aphia_id
 
-                ret_vals.append(to_geojson(summary, **ffname))
-            except Exception as e:
-                print("EXCEPT", imonth, e, file=sys.stderr)
+                    # if this is the "all", find the range
+                    if is_all:
+                        range_low = max(range_low, summary['level'].min())
+                        range_high = min(range_high, summary['level'].max())
 
-                ret_vals.append(to_geojson(FeatureCollection([]), **ffname))
+                    if buffer:
+                        summary = summary.buffer(buffer)
+
+                    if simplify:
+                        summary = summary.simplify(simplify)
+
+                    ret_vals.append(to_geojson(summary, **ffname))
+
+                    # if we DON't have multiple projects feeding the species, that means this one project is also the all layer.
+                    # rather than compute it again, just return a copy with the project_code metadata changed to _ALL.
+                    if not has_multiple:
+                        ret_vals.append(
+                            to_geojson(
+                                summary,
+                                **{
+                                    **ffname,
+                                    'project_code': '_ALL'
+                                }
+                            )
+                        )
+
+                except Exception as e:
+                    print("EXCEPT", imonth, e, file=sys.stderr)
+
+                    ret_vals.append(to_geojson(FeatureCollection([]), **ffname))
 
     return ret_vals
 

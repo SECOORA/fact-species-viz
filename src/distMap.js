@@ -19,14 +19,21 @@ const pointStyle = {
 function DistMap(props) {
   const mapHeight = props.mapHeight || 320;
   const url = useMemo(() => {
-    let start = `${process.env.DATA_URL}/atp/${props.aphiaId}/distribution/${props.year}`;
+    let start = `${process.env.DATA_URL}/atp/${props.aphiaId}/distribution/${props.year}`,
+      extra = [];
     if (props.month !== 'all') {
-      start += `?month=${props.month}`;
+      extra.push(`month=${props.month}`);
+    }
+    if (props.project !== '_ALL') {
+      extra.push(`project=${props.project}`);
+    }
+    if (extra.length) {
+      start += '?' + extra.join("&");
     }
 
     return start;
     
-  }, [props.aphiaId, props.year, props.month]);
+  }, [props.aphiaId, props.year, props.month, props.project]);
 
   const normalStyle = useMemo(() => {
     return {

@@ -1,6 +1,6 @@
 import json
 from json.decoder import JSONDecodeError
-from typing import Any, Dict, Optional, Mapping
+from typing import Any, Dict, Optional, Mapping, Sequence
 
 from redis import Redis
 
@@ -91,3 +91,17 @@ def update_species_scientific_name(aphia_id: int, scientific_name: str):
     assert r
 
     r.hset(f"species:scientific", str(aphia_id), scientific_name)
+
+
+def get_projects_for_species(aphia_id: int) -> Sequence[str]:
+    assert r
+
+    v = r.keys(f"data:{aphia_id}:*:*:*:*")
+    ret = set()
+    for vv in v:
+        _, _, _, _, _, project_code = vv.decode('utf-8').split(":")
+        if project_code == "_ALL":
+            continue    # we always expect all
+        ret.add(project_code)
+
+    return sorted(ret)

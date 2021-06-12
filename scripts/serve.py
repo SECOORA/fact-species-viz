@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from . import tasks
-from .cache import read_cache, get_species_ids, get_species_months, get_species_years
+from .cache import get_projects_for_species, read_cache, get_species_ids, get_species_months, get_species_years
 from .log import logger
 from .utils import ATPType, get_atp_cache_key
 
@@ -54,13 +54,22 @@ async def species_months(aphia_id: int, year: int):
     return get_species_months(aphia_id, year)
 
 
+@app.get('/atp/projects/{aphia_id}')
+async def species_projects(aphia_id: int):
+    return get_projects_for_species(aphia_id)
+
+
 @app.get('/atp/{aphia_id}/{type}/{year}')
-async def get_atp_data(aphia_id: int, year: int, type: ATPType, month: Optional[int] = None):
+async def get_atp_data(aphia_id: int, year: int, type: ATPType, month: Optional[int] = None, project: Optional[str]=None):
     kwargs = {
         'species_aphia_id': aphia_id,
         'year': year,
         'type': type.value
     }
+
+    # add it here so that the default happens in get_atp_cache_key and we don't have to repeat the default all over the place
+    if project is not None:
+        kwargs['project_code'] = project
 
     # if month not asked for, check all
     ck = get_atp_cache_key('data', **kwargs, month=month or 'all')

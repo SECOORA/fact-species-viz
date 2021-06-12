@@ -21,6 +21,8 @@ function SpeciesVizApp(props) {
   const [allAphiaIds, setAllAphiaIds] = useState([]);
   const [allSpeciesNames, setAllSpeciesNames] = useState([]);
   const [aphiaId, setAphiaId] = useState(parseInt(query.get('aphiaId')) || 105793)
+  const [speciesProjects, setSpeciesProjects] = useState([]);
+  const [project, setProject] = useState("_ALL");
   const [month, setMonth] = useState(query.get('month') || 'all');
   const [year, setYear] = useState(query.get('year') || 2019);
   const [availYears, setAvailYears] = useState([]);
@@ -93,6 +95,10 @@ function SpeciesVizApp(props) {
     )
 
     setAphiaId(newAphiaId);
+
+    // other state changes:
+    setProject('_ALL');
+    setSpeciesProjects([]);
   }
 
   useEffect(() => {
@@ -105,6 +111,15 @@ function SpeciesVizApp(props) {
 
     getAphiaIds();
   }, []);
+
+  useEffect(() => {
+    async function getProjects() {
+      const response = await axios.get(`${process.env.DATA_URL}/atp/projects/${aphiaId}`);
+      setSpeciesProjects(response.data)
+    }
+
+    getProjects();
+  }, [aphiaId])
 
   useEffect(() => {
     async function getYears() {
@@ -138,6 +153,13 @@ function SpeciesVizApp(props) {
           onClick={_setAphiaId}
           curVal={aphiaId}
           label="Species"
+        />
+
+        <Chooser
+          items={["_ALL", ...speciesProjects]}
+          onClick={setProject}
+          curVal={project}
+          label="Project"
         />
 
         <Chooser
@@ -178,8 +200,10 @@ function SpeciesVizApp(props) {
           label="Palette"
         />
       </nav>
+
       <DistMap
         aphiaId={aphiaId}
+        project={project}
         year={year}
         month={month}
         mapHeight={700}
