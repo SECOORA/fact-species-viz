@@ -21,8 +21,6 @@ function GLMap(props) {
     */
   });
 
-  // const [styles, setStyles] = useState(props.styles || {});
-  // const [layerData, setLayerData] = useState(props.layerData || {});
   const [allBBox, setAllBBox] = useState(null);
   const [noData, setNoData] = useState(false);
   const [noDataReason, setNoDataReason] = useState(null);
@@ -95,72 +93,17 @@ function GLMap(props) {
     })
   }
 
-  useEffect(() => {
-    if (!props.layerSources) {
-      return;
-    }
+    //   const newAllBBox = bbox(allFeatures);
 
-    // @TODO >1 sources
-    // good pattern: https://github.com/facebook/react/issues/14326#issuecomment-472043812
-    let {url, transform} = props.layerSources;
-    d3.json(url).then(d => {
-
-      let transformed = transform(d);
-      if (transformed === null) {
-        setNoData(true);
-        setLayerData({});   // remove any previous layer data
-        setAllBBox(null);
-        return;
-      }
-
-      // unset nodata on successful load
-      setNoData(false);
-      setNoDataReason(null);
-
-      // build sources from returned data and styles
-      // extract and merge individual features
-      let data = {},
-        allFeatures = {
-          type: "FeatureCollection",
-          features: []
-        };
-
-      transformed.catalog.forEach(ce => {
-        Object.entries(ce.data).forEach(([layerName, feature]) => {
-          if (!data.hasOwnProperty(layerName)) {
-            data[layerName] = {
-              type: "FeatureCollection",
-              features: []
-            }
-          }
-
-          data[layerName].features.push(feature);
-          allFeatures.features.push(feature);
-        });
-      });
-
-      // pad out missing styles from normal
-      // @TODO: ensure normal defined
-      let newStyles = {};
-      Object.entries(transformed.styles).forEach(([layerName, styleObj]) => {
-        newStyles[layerName] = {
-          normal: styleObj.normal,
-        };
-      });
-
-      const newAllBBox = bbox(allFeatures);
-
-      setStyles(newStyles);
-      setLayerData(data);
-      setAllBBox(newAllBBox);
-      // zoomToExtents(newAllBBox);
-    }).catch(e => {
-      setNoData(true);
-      setNoDataReason(e.toString());
-      setLayerData({});   // remove any previous layer data
-      setAllBBox(null);
-    });
-  }, [props.layerSources]);
+    //   setStyles(newStyles);
+    //   setLayerData(data);
+    //   setAllBBox(newAllBBox);
+    //   // zoomToExtents(newAllBBox);
+    // }).catch(e => {
+    //   setNoData(true);
+    //   setNoDataReason(e.toString());
+    //   setLayerData({});   // remove any previous layer data
+    //   setAllBBox(null);
 
   // TODO: useEffect on layerData changes to calculate allbbox
   // TODO: allBbox should be a memo calc on layerData
@@ -185,29 +128,15 @@ function GLMap(props) {
                 <NavigationControl />
               </div> */}
 
-              {Object.entries(props.layerData || {}).map(([layerName, fc]) => {
-                return (
-                  <Source
-                    id={layerName}
-                    type="geojson"
-                    data={fc}
-                    key={layerName}
-                  >
-                    {/*
-                     * The invisible layer used for interactiveLayers in mapbox.  Always present, never visible.
-                     */}
-                    <Layer id={layerName} {...props.styles[layerName].normal} />
+              {/* static layers for reliable z-indexing (max 5) */}
+              <Layer id="z-0" type="background" layout={{ visibility: 'none'}} paint={{}} />
+              <Layer id="z-1" type="background" layout={{ visibility: 'none'}} paint={{}} />
+              <Layer id="z-2" type="background" layout={{ visibility: 'none'}} paint={{}} />
+              <Layer id="z-3" type="background" layout={{ visibility: 'none'}} paint={{}} />
+              <Layer id="z-4" type="background" layout={{ visibility: 'none'}} paint={{}} />
 
-                    {/*
-                     * "Normal" - on when nothing hovered or selected.
-                     */}
-                    <Layer
-                      id={layerName + "normal"}
-                      {...props.styles[layerName].normal}
-                    />
-                  </Source>
-                );
-              })}
+              {props.children}
+
             </ReactMapGL>
           )}
         </AutoSizer>

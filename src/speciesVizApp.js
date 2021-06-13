@@ -28,6 +28,7 @@ function SpeciesVizApp(props) {
   const [availYears, setAvailYears] = useState([]);
   const [availMonths, setAvailMonths] = useState([]);
   const [palette, setPalette] = useState('thermal');
+  const [beforeId, setBeforeId] = useState('z-0');
 
   const buildQueryString = (newArgs) => {
     let {newMonth = month, newYear = year, newAphiaId = aphiaId} = newArgs;
@@ -143,9 +144,7 @@ function SpeciesVizApp(props) {
     <div className="mr-12">
       <nav>
         <h1 className="text-2xl ml-24 mb-2 pl-1">
-          <a href="/">
-            FACT DaViT
-          </a>
+          <a href="/">FACT DaViT</a>
         </h1>
         <Chooser
           items={allAphiaIds}
@@ -164,17 +163,7 @@ function SpeciesVizApp(props) {
 
         <Chooser
           items={[
-            2009,
-            2010,
-            2011,
-            2012,
-            2013,
-            2014,
-            2015,
-            2016,
-            2017,
-            2018,
-            2019,
+            2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019,
             2020,
           ]}
           enabledItems={availYears}
@@ -199,6 +188,13 @@ function SpeciesVizApp(props) {
           curVal={palette}
           label="Palette"
         />
+
+        <Chooser
+          items={['z-0', 'z-1', 'z-2', 'z-3', 'z-4']}
+          onClick={setBeforeId}
+          curVal={beforeId}
+          label="beforeID"
+        />
       </nav>
 
       <DistMap
@@ -208,6 +204,7 @@ function SpeciesVizApp(props) {
         month={month}
         mapHeight={700}
         palette={palette}
+        beforeId={beforeId}
       />
     </div>
   );

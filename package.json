@@ -25,7 +25,8 @@
     "react-router-dom": "^5.2.0",
     "react-spinners": "^0.8.0",
     "react-tooltip": "^4.2.10",
-    "react-virtualized": "^9.21.2"
+    "react-virtualized": "^9.21.2",
+    "swr": "^0.5.6"
   },
   "scripts": {
     "start": "parcel static/index.html",
