@@ -4,7 +4,8 @@ import {useLocation, useHistory} from 'react-router';
 import axios from "axios";
 import _ from 'lodash';
 
-import DistMap from "./distMap.js"
+import GLMap from "./glmap.js";
+import DataLayer from "./dataLayer.js";
 import Chooser from "./chooser.js";
 import Palettes from "./palettes.js";
 
@@ -18,17 +19,23 @@ function SpeciesVizApp(props) {
     location = useLocation(),
     history = useHistory();
 
+  // TODO: replace with inventory
   const [allAphiaIds, setAllAphiaIds] = useState([]);
   const [allSpeciesNames, setAllSpeciesNames] = useState([]);
-  const [aphiaId, setAphiaId] = useState(parseInt(query.get('aphiaId')) || 105793)
   const [speciesProjects, setSpeciesProjects] = useState([]);
-  const [project, setProject] = useState("_ALL");
-  const [month, setMonth] = useState(query.get('month') || 'all');
-  const [year, setYear] = useState(query.get('year') || 2019);
   const [availYears, setAvailYears] = useState([]);
   const [availMonths, setAvailMonths] = useState([]);
-  const [palette, setPalette] = useState('thermal');
-  const [beforeId, setBeforeId] = useState('z-0');
+
+  const [layerData, setLayerData] = useState([
+    {
+      aphiaId: 159353,
+      year: 2016,
+      project: '_ALL',
+      month: 'all',
+      palette: 'thermal'
+    }
+  ]);
+  const [activeIdx, setActiveIdx] = useState(0);
 
   const buildQueryString = (newArgs) => {
     let {newMonth = month, newYear = year, newAphiaId = aphiaId} = newArgs;
@@ -45,62 +52,25 @@ function SpeciesVizApp(props) {
     return temp;
   }
 
-  // handle any url params controlling state
-  useEffect(() => {
-    if (query.has("aphiaId")) {
-      const aphiaId = parseInt(query.get("aphiaId"));
-      setAphiaId(aphiaId);
-    }
+  // // handle any url params controlling state
+  // useEffect(() => {
+  //   if (query.has("aphiaId")) {
+  //     const aphiaId = parseInt(query.get("aphiaId"));
+  //     setAphiaId(aphiaId);
+  //   }
 
-    if (query.has("month")) {
-      let m = query.get("month");
-      if (m !== "all") {
-        m = parseInt(m);
-      }
-      setMonth(m);
-    }
+  //   if (query.has("month")) {
+  //     let m = query.get("month");
+  //     if (m !== "all") {
+  //       m = parseInt(m);
+  //     }
+  //     setMonth(m);
+  //   }
 
-    if (query.has("year")) {
-      setYear(parseInt(query.get("year")));
-    }
-  }, [location])
-
-  const _setYear = (newYear) => {
-    history.push(
-      {
-        pathname: location.pathname,
-        search: buildQueryString({newYear: newYear})
-      }
-    )
-
-    setYear(newYear);
-  }
-
-  const _setMonth = (newMonth) => {
-    history.push(
-      {
-        pathname: location.pathname,
-        search: buildQueryString({newMonth: newMonth})
-      }
-    )
-
-    setMonth(newMonth);
-  }
-
-  const _setAphiaId = (newAphiaId) => {
-    history.push(
-      {
-        pathname: location.pathname,
-        search: buildQueryString({newAphiaId: newAphiaId})
-      }
-    )
-
-    setAphiaId(newAphiaId);
-
-    // other state changes:
-    setProject('_ALL');
-    setSpeciesProjects([]);
-  }
+  //   if (query.has("year")) {
+  //     setYear(parseInt(query.get("year")));
+  //   }
+  // }, [location])
 
   useEffect(() => {
     async function getAphiaIds() {
@@ -114,31 +84,47 @@ function SpeciesVizApp(props) {
   }, []);
 
   useEffect(() => {
+    setSpeciesProjects([]);
+
     async function getProjects() {
-      const response = await axios.get(`${process.env.DATA_URL}/atp/projects/${aphiaId}`);
+      const response = await axios.get(`${process.env.DATA_URL}/atp/projects/${layerData[activeIdx].aphiaId}`);
       setSpeciesProjects(response.data)
     }
 
     getProjects();
-  }, [aphiaId])
+  }, [layerData[activeIdx].aphiaId])
 
   useEffect(() => {
     async function getYears() {
-      const response = await axios.get(`${process.env.DATA_URL}/atp/species/${aphiaId}/years`);
+      const response = await axios.get(`${process.env.DATA_URL}/atp/species/${layerData[activeIdx].aphiaId}/years`);
       setAvailYears(response.data)
     }
 
     getYears();
-  }, [aphiaId])
+  }, [layerData[activeIdx].aphiaId])
 
   useEffect(() => {
     async function getMonths() {
-      const response = await axios.get(`${process.env.DATA_URL}/atp/species/${aphiaId}/${year}`);
+      const response = await axios.get(`${process.env.DATA_URL}/atp/species/${layerData[activeIdx].aphiaId}/${layerData[activeIdx].year}`);
       setAvailMonths(response.data)
     }
 
     getMonths();
-  }, [aphiaId, year])
+  }, [layerData[activeIdx].aphiaId, layerData[activeIdx].year])
+
+  const _updateLayer = (value) => {
+    const newLayerData = layerData.map((ld, idx) => {
+      if (idx != activeIdx) {
+        return ld;
+      }
+      return {
+        ...ld,
+        ...value
+      }
+    });
+
+    setLayerData(curLd => newLayerData);
+  }
 
   return (
     <div className="mr-12">
@@ -149,15 +135,15 @@ function SpeciesVizApp(props) {
         <Chooser
           items={allAphiaIds}
           labels={allSpeciesNames}
-          onClick={_setAphiaId}
-          curVal={aphiaId}
+          onClick={v => _updateLayer({aphiaId: v, project: '_ALL'})}    // always reset project when changing species
+          curVal={layerData[activeIdx].aphiaId}
           label="Species"
         />
 
         <Chooser
           items={["_ALL", ...speciesProjects]}
-          onClick={setProject}
-          curVal={project}
+          onClick={v => _updateLayer({project: v})}
+          curVal={layerData[activeIdx].project}
           label="Project"
         />
 
@@ -167,8 +153,8 @@ function SpeciesVizApp(props) {
             2020,
           ]}
           enabledItems={availYears}
-          onClick={_setYear}
-          curVal={year}
+          onClick={v => _updateLayer({year: v})}
+          curVal={layerData[activeIdx].year}
           label="Year"
         />
 
@@ -177,35 +163,39 @@ function SpeciesVizApp(props) {
             m !== "all" ? m + 1 : m
           )}
           enabledItems={[...availMonths, "all"]}
-          onClick={_setMonth}
-          curVal={month}
+          onClick={v => _updateLayer({month: v})}
+          curVal={layerData[activeIdx].month}
           label="Month"
         />
 
         <Chooser
           items={Object.keys(Palettes)}
-          onClick={setPalette}
-          curVal={palette}
+          onClick={v => _updateLayer({palette: v})}
+          curVal={layerData[activeIdx].palette}
           label="Palette"
-        />
-
-        <Chooser
-          items={['z-0', 'z-1', 'z-2', 'z-3', 'z-4']}
-          onClick={setBeforeId}
-          curVal={beforeId}
-          label="beforeID"
         />
       </nav>
 
-      <DistMap
-        aphiaId={aphiaId}
-        project={project}
-        year={year}
-        month={month}
+      <GLMap
+        idField="key"
+        mapStyle="mapbox://styles/mz4/ck6m8v8x9052n1iphvif4ilra"
+        // mapStyle="mapbox://styles/mz4/ck6kzovim17x91iqv3rv1h7u4"
         mapHeight={700}
-        palette={palette}
-        beforeId={beforeId}
-      />
+        mapWidth={700}
+        maxZoom={4}
+      >
+        {layerData.map((ld, idx) => {
+          return <DataLayer
+            key={`layer-${idx}`}
+            beforeId={`z-${idx}`}
+            aphiaId={ld.aphiaId}
+            year={ld.year}
+            palette={ld.palette}
+            month={ld.month}
+            project={ld.project}
+          />;
+        })}
+      </GLMap>
     </div>
   );
 }
