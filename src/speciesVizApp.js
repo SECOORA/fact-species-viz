@@ -8,6 +8,7 @@ import GLMap from "./glmap.js";
 import DataLayer from "./dataLayer.js";
 import Chooser from "./chooser.js";
 import Palettes from "./palettes.js";
+import LayerTile from "./layerTile.js";
 
 const useQuery = () => {
   return new URLSearchParams(useLocation().search);
@@ -30,10 +31,17 @@ function SpeciesVizApp(props) {
     {
       aphiaId: 159353,
       year: 2016,
-      project: '_ALL',
-      month: 'all',
-      palette: 'thermal'
-    }
+      project: "_ALL",
+      month: "all",
+      palette: "thermal",
+    },
+    {
+      aphiaId: 159353,
+      year: 2017,
+      project: "_ALL",
+      month: "all",
+      palette: "purples_r",
+    },
   ]);
   const [activeIdx, setActiveIdx] = useState(0);
 
@@ -176,6 +184,16 @@ function SpeciesVizApp(props) {
         />
       </nav>
 
+      {layerData.map((ld, idx) => {
+
+        return <LayerTile
+          key={`lt-${idx}`}
+          onClick={() => setActiveIdx(idx)}
+          isActive={idx === activeIdx}
+          {...ld}
+        />
+      })}
+
       <GLMap
         idField="key"
         mapStyle="mapbox://styles/mz4/ck6m8v8x9052n1iphvif4ilra"
@@ -187,7 +205,7 @@ function SpeciesVizApp(props) {
         {layerData.map((ld, idx) => {
           return <DataLayer
             key={`layer-${idx}`}
-            beforeId={`z-${idx}`}
+            beforeId={`z-${4-idx}`}
             aphiaId={ld.aphiaId}
             year={ld.year}
             palette={ld.palette}

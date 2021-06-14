@@ -205,6 +205,16 @@ export const purples_r = [
   "rgba(242,240,247,255)",
 ];
 
+export const paletteToCssGradient = (palette) => {
+  let parts = [];
+  for (let i = 0; i < palette.length; i+=2) {
+    const pct = Math.round(palette[i] * 100);
+    parts.push(`${palette[i+1]} ${pct}%`);
+  }
+
+  return `linear-gradient(90deg, ${parts.join(', ')})`;
+}
+
 export default {
   thermal: thermal,
   viridis: viridis,
