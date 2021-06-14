@@ -70,7 +70,11 @@ const LayerTile = (props) => {
             onClick={props.onLayerDown}
             enabled={props.enableLayerDown}
           />
-          <IconDuplicate size={4} enabled={false} />
+          <IconDuplicate
+            size={4}
+            onClick={props.onLayerDuplicate}
+            enabled={props.enableDuplicate}
+          />
           <IconExpand size={4} enabled={false} />
           <IconTrash
             size={4}

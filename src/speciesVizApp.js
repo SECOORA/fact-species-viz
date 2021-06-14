@@ -11,6 +11,8 @@ import LayerEditor from "./layerEditor.js";
 import Legend from "./legend.js";
 import Palettes from "./palettes.js";
 
+const getRandomItem = (iterable) => iterable[Math.floor(Math.random() * iterable.length)]
+
 const useQuery = () => {
   return new URLSearchParams(useLocation().search);
 }
@@ -142,24 +144,27 @@ function SpeciesVizApp(props) {
     setLayerData(ld => newLayerData);
   }
 
-  const addLayer = () => {
+  const addLayer = (srcIdx=0, randomPalette=true) => {
     if (layerData.length >= 5) { return; }
 
     setLayerData(ld => {
-      const usedPalettes = ld.map((ll) => ll.palette);   
-      const getRandomItem = (iterable) => iterable[Math.floor(Math.random() * iterable.length)]
+      let palette = ld[srcIdx].palette;
+      if (randomPalette) {
+        const usedPalettes = ld.map((ll) => ll.palette);
+        palette = getRandomItem(
+          Object.keys(Palettes).filter((p) => usedPalettes.indexOf(p) === -1)
+        );
+      }
 
-      return [
+      const newData = [
         {
-          ...ld[0], // @TODO: variety
+          ...ld[srcIdx],
           layerKey: `oo-${Math.random().toString(36).substring(7)}`,
-          year: ld[0].year + 1,
-          palette: getRandomItem(Object.keys(Palettes).filter(
-            (p) => usedPalettes.indexOf(p) === -1
-          ))
+          palette: palette,
         },
         ...ld,
       ];
+      return newData;
     });
     setActiveIdx(0);
   }
@@ -274,7 +279,7 @@ function SpeciesVizApp(props) {
           >
             <div
               className="w-16 h-16 bg-indigo-700 self-end text-4xl cursor-pointer text-white"
-              onClick={addLayer}
+              onClick={() => {addLayer()}}
             >
               +
             </div>
@@ -293,6 +298,8 @@ function SpeciesVizApp(props) {
                   enableLayerDown={idx < layerData.length - 1}
                   onLayerDelete={() => deleteLayer(idx)}
                   enableDelete={layerData.length > 1}
+                  onLayerDuplicate={() => addLayer(idx, false)}
+                  enableDuplicate={layerData.length < 5}
                 />
               );
             })}
