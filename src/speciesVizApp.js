@@ -210,6 +210,22 @@ function SpeciesVizApp(props) {
     }
   }
 
+  /**
+   * Deletes a layer with the given index.
+   * @param {int} idx 
+   */
+  const deleteLayer = (idx) => {
+    if (layerData.length <= 1) {
+      return;
+    }
+
+    setLayerData(ld => {
+      const copy = [...ld];
+      copy.splice(idx, 1);
+      return copy;
+    })
+  }
+
   return (
     <div>
       <div className="flex">
@@ -271,6 +287,8 @@ function SpeciesVizApp(props) {
                   onLayerDown={() => moveLayer(idx, 1)}
                   enableLayerUp={idx > 0}
                   enableLayerDown={idx < layerData.length - 1}
+                  onLayerDelete={() => deleteLayer(idx)}
+                  enableDelete={layerData.length > 1}
                 />
               );
             })}

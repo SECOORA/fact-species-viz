@@ -29,8 +29,10 @@ const LayerTile = (props) => {
   return (
     <div
       className={classNames("w-64 mt-1 rounded-sm", {
-        "bg-gray-400 border-l border-t border-b border-gray-500": props.isActive,
-        "bg-white border-l border-t border-b border-white shadow": !props.isActive,
+        "bg-gray-400 border-l border-t border-b border-gray-500":
+          props.isActive,
+        "bg-white border-l border-t border-b border-white shadow":
+          !props.isActive,
       })}
     >
       <div className="flex flex-col">
@@ -70,7 +72,12 @@ const LayerTile = (props) => {
           />
           <IconDuplicate size={4} enabled={false} />
           <IconExpand size={4} enabled={false} />
-          <IconTrash size={4} extraClasses={""} enabled={false} />
+          <IconTrash
+            size={4}
+            onClick={props.onLayerDelete}
+            extraClasses={""}
+            enabled={props.enableDelete}
+          />
         </div>
       </div>
     </div>
