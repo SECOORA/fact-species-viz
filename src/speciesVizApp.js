@@ -165,7 +165,6 @@ function SpeciesVizApp(props) {
   }
 
   const updateLegendLevel = (level, layerKey) => {
-    // console.info("UPDATE LEGEND LVEL", level, layerKey);
     setMaxLevels(curMaxLevels => {
       return {
         ...curMaxLevels,
@@ -218,6 +217,11 @@ function SpeciesVizApp(props) {
     if (layerData.length <= 1) {
       return;
     }
+
+    // make sure we remove the scale levels for this layer
+    setMaxLevels(curMaxLevels => {
+      return _.omit(curMaxLevels, layerData[idx].layerKey);
+    });
 
     setLayerData(ld => {
       const copy = [...ld];
