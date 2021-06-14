@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import ReactDOM from "react-dom";
 import {useLocation, useHistory} from 'react-router';
 import axios from "axios";
@@ -28,17 +28,19 @@ function SpeciesVizApp(props) {
 
   const [layerData, setLayerData] = useState([
     {
+      layerKey: "ooba",
       aphiaId: 159353,
       year: 2016,
       project: "_ALL",
-      month: "all",
-      palette: "thermal",
+      month: 6,
+      palette: "reds_r",
     },
     {
+      layerKey: "oajj",
       aphiaId: 159353,
-      year: 2017,
+      year: 2015,
       project: "_ALL",
-      month: "all",
+      month: 6,
       palette: "purples_r",
     },
   ]);
@@ -130,6 +132,22 @@ function SpeciesVizApp(props) {
     setLayerData(ld => newLayerData);
   }
 
+  const addLayer = () => {
+    if (layerData.length >= 5) { return; }
+
+    setLayerData(ld => {
+      return [
+        {
+          ...ld[0],    // @TODO: variety
+          layerKey: `oo-${Math.random()}`,
+          year: ld[0].year + 1
+        },
+        ...ld
+      ]
+    });
+    setActiveIdx(0);
+  }
+
   return (
     <div>
       <div className="flex">
@@ -144,13 +162,14 @@ function SpeciesVizApp(props) {
           {layerData.map((ld, idx) => {
             return (
               <DataLayer
-                key={`layer-${idx}`}
+                key={ld.layerKey}
                 beforeId={`z-${4 - idx}`}
                 aphiaId={ld.aphiaId}
                 year={ld.year}
                 palette={ld.palette}
                 month={ld.month}
                 project={ld.project}
+                layerKey={ld.layerKey}
               />
             );
           })}
@@ -160,6 +179,13 @@ function SpeciesVizApp(props) {
             className="tileholder flex flex-col absolute"
             style={{ left: "-16rem" }}
           >
+            <div
+              className="w-16 h-16 bg-indigo-700 self-end text-4xl cursor-pointer text-white"
+              onClick={addLayer}
+            >
+              +
+            </div>
+
             {layerData.map((ld, idx) => {
               return (
                 <LayerTile

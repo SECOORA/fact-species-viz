@@ -62,6 +62,7 @@ const DataLayer = ({
   project = "_ALL",
   palette = "thermal",
   beforeId = "z-0",
+  layerKey,
 }) => {
   const { data, isLoading, isError } = useDistribution(
     aphiaId,
@@ -71,10 +72,6 @@ const DataLayer = ({
     project
   );
 
-  const layerName = useMemo(() => {
-    return `dist-${aphiaId}-${year}`;
-  }, [aphiaId, year]);
-
   const normalStyle = useMemo(() => {
     return getStyle(palette);
   }, [palette]);
@@ -82,12 +79,12 @@ const DataLayer = ({
   if (!isLoading && !isError) {
     return (
       <Source
-        id={`src-${layerName}`}
+        id={`src-${layerKey}`}
         type="geojson"
         data={data}
-        key={layerName}
+        key={layerKey}
       >
-        <Layer id={layerName} beforeId={beforeId} {...normalStyle} />
+        <Layer id={layerKey} beforeId={beforeId} {...normalStyle} />
       </Source>
     );
   } else {
