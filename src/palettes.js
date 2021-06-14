@@ -113,6 +113,29 @@ export const reds = [
   "rgba(152,12,19,255)",
 ];
 
+export const reds_r = [
+  0.0,
+  "rgba(103,0,13,255)",
+  0.1,
+  "rgba(152,12,19,255)",
+  0.2,
+  "rgba(188,20,26,255)",
+  0.3,
+  "rgba(217,37,35,255)",
+  0.4,
+  "rgba(241,68,50,255)",
+  0.5,
+  "rgba(251,107,75,255)",
+  0.6,
+  "rgba(252,138,106,255)",
+  0.7,
+  "rgba(252,171,143,255)",
+  0.8,
+  "rgba(253,202,181,255)",
+  0.9,
+  "rgba(254,229,216,255)",
+];
+
 export const blues = [
   0.0,
   "rgba(247,251,255,255)",
@@ -225,5 +248,6 @@ export default {
   purples_r: purples_r,
   greens: greens,
   reds: reds,
+  reds_r: reds_r,
   blues: blues,
 }
