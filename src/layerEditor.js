@@ -64,12 +64,33 @@ const LayerEditor = (props) => {
         label="Month"
       />
 
+      <hr />
+
       <Chooser
         items={Object.keys(Palettes)}
         onClick={(v) => _updateLayer({ palette: v })}
         curVal={props.currentLayer.palette}
         label="Palette"
       />
+
+      <div>
+        <label htmlFor="opacity" className="block text-sm">
+          Opacity
+        </label>
+        <div className="inline-block relative w-64">
+          <input
+            type="range"
+            id="opacity"
+            name="opacity"
+            min="0"
+            max="100"
+            value={props.currentLayer.opacity || 50}
+            onChange={(e) =>
+              _updateLayer({ opacity: parseInt(e.target.value) })
+            }
+          />
+        </div>
+      </div>
     </div>
   );
 }

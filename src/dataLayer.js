@@ -6,12 +6,12 @@ import axios from "axios";
 
 import Palettes from "./palettes.js";
 
-const getStyle = (paletteName = "thermal") => {
+const getStyle = (paletteName = "thermal", opacity=100) => {
   return {
     type: "fill",
 
     paint: {
-      "fill-opacity": 0.5,
+      "fill-opacity": opacity/100,
       "fill-color": [
         "interpolate",
         ["linear"],
@@ -62,6 +62,7 @@ const DataLayer = ({
   project = "_ALL",
   palette = "thermal",
   beforeId = "z-0",
+  opacity = 50,
   layerKey,
 }) => {
   const { data, isLoading, isError } = useDistribution(
@@ -73,8 +74,8 @@ const DataLayer = ({
   );
 
   const normalStyle = useMemo(() => {
-    return getStyle(palette);
-  }, [palette]);
+    return getStyle(palette, opacity);
+  }, [palette, opacity]);
 
   if (!isLoading && !isError) {
     return (

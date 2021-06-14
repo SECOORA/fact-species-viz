@@ -170,6 +170,7 @@ function SpeciesVizApp(props) {
                 month={ld.month}
                 project={ld.project}
                 layerKey={ld.layerKey}
+                opacity={ld.opacity}
               />
             );
           })}
