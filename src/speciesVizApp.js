@@ -6,9 +6,8 @@ import _ from 'lodash';
 
 import GLMap from "./glmap.js";
 import DataLayer from "./dataLayer.js";
-import Chooser from "./chooser.js";
-import Palettes from "./palettes.js";
 import LayerTile from "./layerTile.js";
+import LayerEditor from "./layerEditor.js";
 
 const useQuery = () => {
   return new URLSearchParams(useLocation().search);
@@ -120,100 +119,70 @@ function SpeciesVizApp(props) {
     getMonths();
   }, [layerData[activeIdx].aphiaId, layerData[activeIdx].year])
 
-  const _updateLayer = (value) => {
+  const onLayerUpdate = (newLayer) => {
     const newLayerData = layerData.map((ld, idx) => {
       if (idx != activeIdx) {
         return ld;
       }
-      return {
-        ...ld,
-        ...value
-      }
+      return newLayer;
     });
 
-    setLayerData(curLd => newLayerData);
+    setLayerData(ld => newLayerData);
   }
 
   return (
-    <div className="mr-12">
-      <nav>
-        <h1 className="text-2xl ml-24 mb-2 pl-1">
-          <a href="/">FACT DaViT</a>
-        </h1>
-        <Chooser
-          items={allAphiaIds}
-          labels={allSpeciesNames}
-          onClick={v => _updateLayer({aphiaId: v, project: '_ALL'})}    // always reset project when changing species
-          curVal={layerData[activeIdx].aphiaId}
-          label="Species"
-        />
+    <div>
+      <div className="flex">
+        <GLMap
+          idField="key"
+          mapStyle="mapbox://styles/mz4/ck6m8v8x9052n1iphvif4ilra"
+          // mapStyle="mapbox://styles/mz4/ck6kzovim17x91iqv3rv1h7u4"
+          mapHeight={700}
+          mapWidth={700}
+          maxZoom={4}
+        >
+          {layerData.map((ld, idx) => {
+            return (
+              <DataLayer
+                key={`layer-${idx}`}
+                beforeId={`z-${4 - idx}`}
+                aphiaId={ld.aphiaId}
+                year={ld.year}
+                palette={ld.palette}
+                month={ld.month}
+                project={ld.project}
+              />
+            );
+          })}
+        </GLMap>
+        <div className="relative">
+          <div
+            className="tileholder flex flex-col absolute"
+            style={{ left: "-16rem" }}
+          >
+            {layerData.map((ld, idx) => {
+              return (
+                <LayerTile
+                  key={`lt-${idx}`}
+                  onClick={() => setActiveIdx(idx)}
+                  isActive={idx === activeIdx}
+                  {...ld}
+                />
+              );
+            })}
+          </div>
 
-        <Chooser
-          items={["_ALL", ...speciesProjects]}
-          onClick={v => _updateLayer({project: v})}
-          curVal={layerData[activeIdx].project}
-          label="Project"
-        />
-
-        <Chooser
-          items={[
-            2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019,
-            2020,
-          ]}
-          enabledItems={availYears}
-          onClick={v => _updateLayer({year: v})}
-          curVal={layerData[activeIdx].year}
-          label="Year"
-        />
-
-        <Chooser
-          items={[...Array(12).keys(), "all"].map((m) =>
-            m !== "all" ? m + 1 : m
-          )}
-          enabledItems={[...availMonths, "all"]}
-          onClick={v => _updateLayer({month: v})}
-          curVal={layerData[activeIdx].month}
-          label="Month"
-        />
-
-        <Chooser
-          items={Object.keys(Palettes)}
-          onClick={v => _updateLayer({palette: v})}
-          curVal={layerData[activeIdx].palette}
-          label="Palette"
-        />
-      </nav>
-
-      {layerData.map((ld, idx) => {
-
-        return <LayerTile
-          key={`lt-${idx}`}
-          onClick={() => setActiveIdx(idx)}
-          isActive={idx === activeIdx}
-          {...ld}
-        />
-      })}
-
-      <GLMap
-        idField="key"
-        mapStyle="mapbox://styles/mz4/ck6m8v8x9052n1iphvif4ilra"
-        // mapStyle="mapbox://styles/mz4/ck6kzovim17x91iqv3rv1h7u4"
-        mapHeight={700}
-        mapWidth={700}
-        maxZoom={4}
-      >
-        {layerData.map((ld, idx) => {
-          return <DataLayer
-            key={`layer-${idx}`}
-            beforeId={`z-${4-idx}`}
-            aphiaId={ld.aphiaId}
-            year={ld.year}
-            palette={ld.palette}
-            month={ld.month}
-            project={ld.project}
-          />;
-        })}
-      </GLMap>
+          <LayerEditor
+            notifyUpdate={onLayerUpdate}
+            currentLayer={layerData[activeIdx]}
+            allAphiaIds={allAphiaIds}
+            allSpeciesNames={allSpeciesNames}
+            speciesProjects={speciesProjects}
+            availYears={availYears}
+            availMonths={availMonths}
+          />
+        </div>
+      </div>
     </div>
   );
 }

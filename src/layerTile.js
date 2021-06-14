@@ -8,8 +8,9 @@ import classNames from "classnames";
 const LayerTile = (props) => {
   return (
     <div
-      className={classNames("w-64 shadow rounded-sm mb-2", {
+      className={classNames("w-64 shadow rounded-sm", {
         "bg-yellow-500": props.isActive,
+				"bg-white": !props.isActive
       })}
       onClick={(e) => props.onClick()}
     >

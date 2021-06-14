@@ -109,7 +109,7 @@ function GLMap(props) {
   // TODO: allBbox should be a memo calc on layerData
 
   return (
-    <div className="glmap-container">
+    <div className="glmap-container block w-full">
       <div className="glmap-internal-container">
         <AutoSizer disableHeight onResize={onAutoResize}>
           {({ asWidth }) => (
