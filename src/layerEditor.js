@@ -27,7 +27,7 @@ const LayerEditor = (props) => {
   }
 
 	return (
-    <div className="w-64">
+    <div className="w-64 bg-gray-400 p-2 h-full">
       <Chooser
         items={props.allAphiaIds}
         labels={props.allSpeciesNames}

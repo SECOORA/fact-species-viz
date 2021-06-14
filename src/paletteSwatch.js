@@ -11,7 +11,8 @@ const PaletteSwatch = ({
 	height,
 	width,
 	rounded = true,
-	extraClasses
+	extraClasses,
+	onClick
 }) => {
 
 	const paletteBg = useMemo(() => {
@@ -28,8 +29,9 @@ const PaletteSwatch = ({
 
 	return (
 			<div
-				className={classNames(sizeClasses, "mx-auto bg-gray-100", {"rounded-md": rounded}, extraClasses)}
+				className={classNames(sizeClasses, "bg-gray-100", {"rounded-md": rounded}, extraClasses)}
 				style={{ background: paletteBg }}
+				onClick={onClick}
 			/>
 	)
 }
@@ -40,7 +42,8 @@ PaletteSwatch.propTypes = {
 	height: PropTypes.number,
 	width: PropTypes.number,
 	rounded: PropTypes.bool,
-	extraClasses: PropTypes.string
+	extraClasses: PropTypes.string,
+	onClick: PropTypes.func
 }
 
 export default PaletteSwatch;

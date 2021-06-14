@@ -9,6 +9,7 @@ import DataLayer from "./dataLayer.js";
 import LayerTile from "./layerTile.js";
 import LayerEditor from "./layerEditor.js";
 import Legend from "./legend.js";
+import Palettes from "./palettes.js";
 
 const useQuery = () => {
   return new URLSearchParams(useLocation().search);
@@ -37,6 +38,7 @@ function SpeciesVizApp(props) {
       project: "_ALL",
       month: 6,
       palette: "reds_r",
+      type: "distribution"
     },
     {
       layerKey: "oajj",
@@ -45,6 +47,7 @@ function SpeciesVizApp(props) {
       project: "_ALL",
       month: 6,
       palette: "purples_r",
+      type: "distribution"
     },
   ]);
   const [activeIdx, setActiveIdx] = useState(0);
@@ -143,14 +146,20 @@ function SpeciesVizApp(props) {
     if (layerData.length >= 5) { return; }
 
     setLayerData(ld => {
+      const usedPalettes = ld.map((ll) => ll.palette);   
+      const getRandomItem = (iterable) => iterable[Math.floor(Math.random() * iterable.length)]
+
       return [
         {
-          ...ld[0],    // @TODO: variety
+          ...ld[0], // @TODO: variety
           layerKey: `oo-${Math.random().toString(36).substring(7)}`,
-          year: ld[0].year + 1
+          year: ld[0].year + 1,
+          palette: getRandomItem(Object.keys(Palettes).filter(
+            (p) => usedPalettes.indexOf(p) === -1
+          ))
         },
-        ...ld
-      ]
+        ...ld,
+      ];
     });
     setActiveIdx(0);
   }
@@ -163,6 +172,42 @@ function SpeciesVizApp(props) {
         [layerKey]: level
       }
     });
+  }
+
+  /**
+   * Moves the layer indicated by index in the direction given.
+   * Won't do anything if that moves the layer out of bounds.
+   * @param {*} idx 
+   * @param {*} direction 
+   */
+  const moveLayer = (idx, direction) => {
+    // can't go lower than the first layer
+    if (idx === 0 && direction === -1) {
+      return;
+    }
+
+    // can't go beyond the last layerdata
+    if (idx === layerData.length - 1 && direction === 1) {
+      return;
+    }
+
+    const targetIdx = idx + direction;
+
+
+    setLayerData(ld => {
+      const copy = [...ld];
+      copy.splice(targetIdx, 0, copy.splice(idx, 1)[0]);
+      return copy;
+    })
+
+    // is the active index affected by the move?  move along with it
+    if (activeIdx === idx) {
+      // if you're the source, you move in the same direction
+      setActiveIdx(activeIdx + direction);
+    } else if (activeIdx === targetIdx) {
+      // if you're the target, you move in the opposite direction
+      setActiveIdx(activeIdx + (-direction));
+    }
   }
 
   return (
@@ -221,6 +266,11 @@ function SpeciesVizApp(props) {
                   onClick={() => setActiveIdx(idx)}
                   isActive={idx === activeIdx}
                   {...ld}
+                  speciesName={allSpeciesNames[allAphiaIds.indexOf(ld.aphiaId)]}
+                  onLayerUp={() => moveLayer(idx, -1)}
+                  onLayerDown={() => moveLayer(idx, 1)}
+                  enableLayerUp={idx > 0}
+                  enableLayerDown={idx < layerData.length - 1}
                 />
               );
             })}
