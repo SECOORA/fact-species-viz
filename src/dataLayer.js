@@ -6,7 +6,7 @@ import axios from "axios";
 
 import Palettes from "./palettes.js";
 
-const getStyle = (paletteName = "thermal", opacity=100) => {
+const getStyle = (paletteName = "thermal", opacity=100, maxLevel=10) => {
   return {
     type: "fill",
 
@@ -15,7 +15,8 @@ const getStyle = (paletteName = "thermal", opacity=100) => {
       "fill-color": [
         "interpolate",
         ["linear"],
-        ["get", "local_pct"],
+        ["/", ["get", "level"], maxLevel],
+        // ["get", "local_pct"],
         ...Palettes[paletteName],
       ],
     },
@@ -64,6 +65,8 @@ const DataLayer = ({
   beforeId = "z-0",
   opacity = 50,
   layerKey,
+  updateLegendLevel,
+  maxLevel = 10
 }) => {
   const { data, isLoading, isError } = useDistribution(
     aphiaId,
@@ -74,8 +77,16 @@ const DataLayer = ({
   );
 
   const normalStyle = useMemo(() => {
-    return getStyle(palette, opacity);
-  }, [palette, opacity]);
+    return getStyle(palette, opacity, maxLevel);
+  }, [palette, opacity, maxLevel]);
+
+  useEffect(() => {
+    if (!data || !updateLegendLevel) {
+      return;
+    }
+    const maxLevel = Math.max(...data.features.map(f => f.properties.level));
+    updateLegendLevel(maxLevel, layerKey);
+  }, [data]);
 
   if (!isLoading && !isError) {
     return (

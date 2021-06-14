@@ -141,6 +141,7 @@ function GLMap(props) {
           )}
         </AutoSizer>
         <div className="overlay-container absolute top-0 left-0 w-full h-full pointer-events-none">
+          {props.overlayComponents}
           {noData && (
             <div className="w-full h-full bg-white opacity-50 flex place-content-center">
               <div className="flex flex-col justify-center items-center">

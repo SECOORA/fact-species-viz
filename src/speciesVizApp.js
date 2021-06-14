@@ -8,6 +8,7 @@ import GLMap from "./glmap.js";
 import DataLayer from "./dataLayer.js";
 import LayerTile from "./layerTile.js";
 import LayerEditor from "./layerEditor.js";
+import Legend from "./legend.js";
 
 const useQuery = () => {
   return new URLSearchParams(useLocation().search);
@@ -25,6 +26,8 @@ function SpeciesVizApp(props) {
   const [speciesProjects, setSpeciesProjects] = useState([]);
   const [availYears, setAvailYears] = useState([]);
   const [availMonths, setAvailMonths] = useState([]);
+
+  const [maxLevels, setMaxLevels] = useState({}); // layerKey -> maximum
 
   const [layerData, setLayerData] = useState([
     {
@@ -45,6 +48,10 @@ function SpeciesVizApp(props) {
     },
   ]);
   const [activeIdx, setActiveIdx] = useState(0);
+
+  const maxLevel = useMemo(() => {
+    return Math.max(...Object.values(maxLevels));
+  }, [maxLevels])
 
   const buildQueryString = (newArgs) => {
     let {newMonth = month, newYear = year, newAphiaId = aphiaId} = newArgs;
@@ -139,13 +146,23 @@ function SpeciesVizApp(props) {
       return [
         {
           ...ld[0],    // @TODO: variety
-          layerKey: `oo-${Math.random()}`,
+          layerKey: `oo-${Math.random().toString(36).substring(7)}`,
           year: ld[0].year + 1
         },
         ...ld
       ]
     });
     setActiveIdx(0);
+  }
+
+  const updateLegendLevel = (level, layerKey) => {
+    // console.info("UPDATE LEGEND LVEL", level, layerKey);
+    setMaxLevels(curMaxLevels => {
+      return {
+        ...curMaxLevels,
+        [layerKey]: level
+      }
+    });
   }
 
   return (
@@ -158,6 +175,14 @@ function SpeciesVizApp(props) {
           mapHeight={700}
           mapWidth={700}
           maxZoom={4}
+          overlayComponents={
+            <div className="mt-2 ml-2">
+              <Legend
+                maxLevel={maxLevel}
+                palettes={layerData.map((ld) => ld.palette)}
+              />
+            </div>
+          }
         >
           {layerData.map((ld, idx) => {
             return (
@@ -171,6 +196,8 @@ function SpeciesVizApp(props) {
                 project={ld.project}
                 layerKey={ld.layerKey}
                 opacity={ld.opacity}
+                updateLegendLevel={updateLegendLevel}
+                maxLevel={maxLevel}
               />
             );
           })}
