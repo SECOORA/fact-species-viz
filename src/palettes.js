@@ -90,6 +90,29 @@ export const greens = [
   "rgba(0,100,40,255)",
 ];
 
+export const greens_r = [
+  0.0,
+  "rgba(0,68,27,255)",
+  0.1,
+  "rgba(0,100,40,255)",
+  0.2,
+  "rgba(21,127,59,255)",
+  0.3,
+  "rgba(47,151,78,255)",
+  0.4,
+  "rgba(75,176,98,255)",
+  0.5,
+  "rgba(117,196,119,255)",
+  0.6,
+  "rgba(152,213,148,255)",
+  0.7,
+  "rgba(184,227,178,255)",
+  0.8,
+  "rgba(211,238,205,255)",
+  0.9,
+  "rgba(233,247,229,255)",
+];
+
 export const reds = [
   0.0,
   "rgba(255,245,240,255)",
@@ -157,6 +180,29 @@ export const blues = [
   "rgba(23,100,171,255)",
   0.9,
   "rgba(8,74,145,255)",
+];
+
+export const blues_r = [
+  0.0,
+  "rgba(8,48,107,255)",
+  0.1,
+  "rgba(8,74,145,255)",
+  0.2,
+  "rgba(23,100,171,255)",
+  0.3,
+  "rgba(46,126,188,255)",
+  0.4,
+  "rgba(74,152,201,255)",
+  0.5,
+  "rgba(108,174,214,255)",
+  0.6,
+  "rgba(148,196,223,255)",
+  0.7,
+  "rgba(183,212,234,255)",
+  0.8,
+  "rgba(208,225,242,255)",
+  0.9,
+  "rgba(227,238,249,255)",
 ];
 
 export const oranges_r = [
@@ -247,7 +293,9 @@ export default {
   purples: purples,
   purples_r: purples_r,
   greens: greens,
+  greens_r: greens_r,
   reds: reds,
   reds_r: reds_r,
   blues: blues,
+  blues_r: blues_r,
 }
