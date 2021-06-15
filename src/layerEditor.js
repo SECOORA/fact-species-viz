@@ -8,21 +8,55 @@ import Palettes from "./palettes.js";
 const LayerEditor = (props) => {
 
   const _updateLayer = (value) => {
-    // const newLayerData = layerData.map((ld, idx) => {
-    //   if (idx != activeIdx) {
-    //     return ld;
-    //   }
-    //   return {
-    //     ...ld,
-    //     ...value
-    //   }
-    // });
-
-    // setLayerData(curLd => newLayerData);
-    const updatedLayer = {
+    let updatedLayer = {
       ...props.currentLayer,
       ...value
     };
+
+    // if either species or project change, the year/month availability might not be the same
+    // auto-adjust both year and month to a closest available one
+    if (value.hasOwnProperty('aphiaId') || value.hasOwnProperty('project')) {
+      const invItem = _.find(props.dataInventory, (v) => v.aphiaId === updatedLayer.aphiaId),
+        yearData = invItem.byProject[updatedLayer.project]?.years;
+
+      if (!yearData) {
+        console.warn("updateLayer could not find project", updatedLayer, "for", updatedLayer.aphiaId);
+        return;
+      }
+
+      let newYear = updatedLayer.year;
+      const availYears = yearData.map(yd => yd.year),
+        okYear = availYears.indexOf(newYear) !== -1;
+
+      if (!okYear) {
+        // if the year doesn't exist, we'll need to change the year (and likely the month)
+
+        // get the closest years by taking difference from expected year, we might have two 1s if say a gap exists
+        // ie we're currently on 2016 and (2015 yes, 2016 no, 2017 yes) is the situation, and that's ok, we just need any valid year
+        const closestYears = _.sortBy(availYears, y => Math.abs(y - newYear));
+        newYear = closestYears[0];
+
+      }
+
+      // now, adjust month if necessary.
+      let newMonth = updatedLayer.month;
+      if (newMonth !== 'all') {
+        const newYearData = _.find(yearData, (yd) => yd.year === newYear),
+          okMonth = newYearData.months.indexOf(newMonth) !== -1;
+
+        if (!okMonth) {
+          const closestMonths = _.sortBy(newYearData.months, m => Math.abs(m - newMonth));
+          newMonth = closestMonths[0];
+        }
+      }
+
+      // update the layer with new year/month (might be the same)
+      updatedLayer = {
+        ...updatedLayer,
+        year: newYear,
+        month: newMonth
+      }
+    }
 
     props.notifyUpdate(updatedLayer);
   }
@@ -54,10 +88,10 @@ const LayerEditor = (props) => {
       return [];
     }
 
-    // @TODO technically should filter by project too
-    return invItem.byProject['_ALL'].years.map(yd => yd.year);
+    // should filter by project too
+    return invItem.byProject[props.currentLayer.project].years.map(yd => yd.year);
 
-  }, [props.dataInventory, props.currentLayer.aphiaId]);
+  }, [props.dataInventory, props.currentLayer.aphiaId, props.currentLayer.project]);
 
   const availMonths = useMemo(() => {
 
@@ -66,10 +100,10 @@ const LayerEditor = (props) => {
       return [];
     }
 
-    // @TODO technically should filter by project too
-    const yearData = _.find(invItem.byProject['_ALL'].years, (v) => v.year === props.currentLayer.year);
+    // should filter by project too
+    const yearData = _.find(invItem.byProject[props.currentLayer.project].years, (v) => v.year === props.currentLayer.year);
     return yearData?.months;
-  }, [props.dataInventory, props.currentLayer.aphiaId, props.currentLayer.year]);
+  }, [props.dataInventory, props.currentLayer.aphiaId, props.currentLayer.year, props.currentLayer.project]);
 
 	return (
     <div className="w-64 bg-gray-400 p-2 h-full">

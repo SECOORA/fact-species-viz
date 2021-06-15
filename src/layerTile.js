@@ -48,7 +48,13 @@ const LayerTile = (props) => {
               {props.speciesName ?? props.aphiaId}
             </div>
             <div className="text-gray-600 capitalize text-sm">
-              {props.year} &middot; {monthName}
+              {props.year} &middot; {monthName}{" "}
+              {props.project !== "_ALL" && (
+                <>
+                  {" "}
+                  &middot; <span className="font-bold">{props.project}</span>
+                </>
+              )}
             </div>
           </div>
 
@@ -75,7 +81,7 @@ const LayerTile = (props) => {
             onClick={props.onLayerDuplicate}
             enabled={props.enableDuplicate}
           />
-          <IconExpand size={4} enabled={false} />
+          {/* <IconExpand size={4} enabled={true} /> */}
           <IconTrash
             size={4}
             onClick={props.onLayerDelete}
