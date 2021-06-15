@@ -5,6 +5,7 @@ import _ from 'lodash';
 import Chooser from "./chooser.js";
 import Palettes from "./palettes.js";
 import {IconLeft, IconRight} from "./icon.js";
+import classNames from "classnames";
 
 const LayerEditor = (props) => {
 
@@ -162,7 +163,7 @@ const LayerEditor = (props) => {
 
       <Chooser
         items={speciesProjects}
-        labels={['All Projects', ...speciesProjects.slice(1)]}
+        labels={["All Projects", ...speciesProjects.slice(1)]}
         onClick={(v) => _updateLayer({ project: v })}
         curVal={props.currentLayer.project}
         label="Project"
@@ -185,13 +186,38 @@ const LayerEditor = (props) => {
         items={[...Array(12).keys(), "all"].map((m) =>
           m !== "all" ? m + 1 : m
         )}
-        enabledItems={[...availMonths || [], "all"]}
+        enabledItems={[...(availMonths || []), "all"]}
         onClick={(v) => _updateLayer({ month: v })}
         curVal={props.currentLayer.month}
         label="Month"
-        before={<IconLeft size={4} onClick={() => changeMonth(-1)} extraClasses="" />}
+        before={
+          <IconLeft size={4} onClick={() => changeMonth(-1)} extraClasses="" />
+        }
         after={<IconRight size={4} onClick={() => changeMonth(1)} />}
       />
+
+      <div className="flex mx-2 my-4">
+        <button
+          className={classNames("text-sm flex-grow rounded-r-none border-l-0  hover:scale-110 focus:outline-none flex justify-center px-4 py-2 rounded font-bold cursor-pointer",
+          {
+            "hover:bg-indigo-200 bg-indigo-100 text-indigo-700 border duration-200 ease-in-out border-indigo-600 transition": props.currentLayer.type === 'distribution',
+            "hover:bg-gray-200 bg-gray-100 text-gray-700 border duration-200 ease-in-out border-gray-600 transition": props.currentLayer.type !== 'distribution'
+          })}
+          onClick={() => _updateLayer({type: 'distribution'})}
+        >
+          <div className="flex leading-5">Distribution</div>
+        </button>
+        <button
+          className={classNames("text-sm flex-grow rounded-l-none border-l-0  hover:scale-110 focus:outline-none flex justify-center px-4 py-2 rounded font-bold cursor-pointer",
+          {
+            "hover:bg-indigo-200 bg-indigo-100 text-indigo-700 border duration-200 ease-in-out border-indigo-600 transition": props.currentLayer.type === 'range',
+            "hover:bg-gray-200 bg-gray-100 text-gray-700 border duration-200 ease-in-out border-gray-600 transition": props.currentLayer.type !== 'range'
+          })}
+          onClick={() => _updateLayer({type: 'range'})}
+        >
+          <div className="flex leading-5">Range</div>
+        </button>
+      </div>
 
       <hr className="my-2" />
 

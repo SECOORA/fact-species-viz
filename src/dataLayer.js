@@ -66,12 +66,13 @@ const DataLayer = ({
   opacity = 50,
   layerKey,
   updateLegendLevel,
-  maxLevel = 10
+  maxLevel = 10,
+  type = 'distribution'
 }) => {
   const { data, isLoading, isError } = useDistribution(
     aphiaId,
     year,
-    "distribution",
+    type,
     month,
     project
   );

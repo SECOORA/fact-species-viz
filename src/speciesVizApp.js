@@ -241,6 +241,7 @@ function SpeciesVizApp(props) {
                 opacity={ld.opacity}
                 updateLegendLevel={updateLegendLevel}
                 maxLevel={maxLevel}
+                type={ld.type}
               />
             );
           })}
