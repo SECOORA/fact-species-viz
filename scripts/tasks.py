@@ -21,10 +21,12 @@ app = Celery('atp', broker=CONFIG.redis_dsn)
 def run_atp_process(project_code: str, year: int, type: ATPType, month: Optional[int] = None):
     agg_method: str
     summary_method: str
+    # extra_kwargs: Dict[str, Any] = {}
 
     if type == ATPType.range:
-        agg_method = ""
-        summary_method = ""
+        agg_method = "animal_interpolated_paths"
+        summary_method = "concave_hull"
+        # extra_kwargs['buffer'] = 0.1
     elif type == ATPType.distribution:
         agg_method = "animal_interpolated_paths"
         summary_method = "distribution_buffered"
@@ -57,6 +59,10 @@ def run_atp_process(project_code: str, year: int, type: ATPType, month: Optional
 
     # store in cache
     for d in vals:
+        if 'type' in d['_metadata']:
+            assert type == d['_metadata']['type']
+            del d['_metadata']['type']
+
         ck = get_atp_cache_key('data', **d['_metadata'], type=type)
 
         ret_val.add((type, str(d['_metadata'].get('species_aphia_id')), str(d['_metadata'].get('year'))))

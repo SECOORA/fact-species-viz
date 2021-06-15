@@ -569,18 +569,22 @@ def summary_convex(gdf: geopandas.GeoDataFrame, **kwargs) -> geopandas.GeoSeries
     return hull
 
 def summary_concave(gdf: geopandas.GeoDataFrame, **kwargs) -> BaseGeometry:
-    month_df_points = np.stack(
+    month_df_points = np.unique(np.stack(
         (
             gdf['longitude'].to_numpy(),
             gdf['latitude'].to_numpy()
         ),
         axis=1
-    )
+    ), axis=0)
     hullobj = ConcaveHull(month_df_points)
     if hullobj is not None:
         geom = asPolygon(hullobj.calculate())
         buffered_geom = hullobj.buffer_in_meters(geom, 1000)
-        return geopandas.GeoSeries([buffered_geom])
+        feat = buffer_union(Feature(
+            smooth_polygon(buffered_geom),
+            {'level': 1}
+        ))
+        return geopandas.GeoDataFrame.from_features([feat])
 
     # couldn't do concave? convex is close.
     print("WARN: could not do concave hull, returning convex", file=sys.stderr)
@@ -723,61 +727,44 @@ summary_methods = {
     'raw': {
         'callable': summary_raw,
         'discrim': '',
+        'type': 'range'
     },
     'convex_hull': {
         'callable': summary_convex,
         'discrim': 'convex',
+        'type': 'range'
     },
     'concave_hull': {
         'callable': summary_concave,
-        'discrim': 'concave'
+        'discrim': 'concave',
+        'type': 'range'
     },
     'bbox': {
         'callable': summary_bbox,
         'discrim': 'bbox',
+        'type': 'range'
     },
     'rotated_bbox': {
         'callable': summary_rotated_bbox,
         'discrim': 'rbbox',
+        'type': 'range'
     },
     'distribution': {
         'callable': summary_distribution,
-        'discrim': 'dist'
+        'discrim': 'dist',
+        'type': 'distribution'
     },
     'distribution_buffered': {
         'callable': summary_distribution_buffered,
-        'discrim': 'dist_buffered'
+        'discrim': 'dist_buffered',
+        'type': 'distribution'
     },
     'distribution_kde': {
         'callable': summary_distribution_kde,
-        'discrim': 'dist_kde'
+        'discrim': 'dist_kde',
+        'type': 'distribution'
     }
 }
-
-
-def build_cache_name(trackercode: str, species_common_name: str, species_scientific_name: str, species_aphia_id: str, year: Union[int, str], month: Union[int, str], lookup_agg: Optional[str]=None, lookup_summary: Optional[str]=None) -> Dict[str, str]:
-    """
-    Makes a dict of cacheable discriminant parts.
-
-    Can optionally look up the agg/summary parts.
-    """
-    name = {
-        'project_code': trackercode,
-        'species_common_name': species_common_name,
-        'species_scientific_name': species_scientific_name,
-        'species_aphia_id': species_aphia_id,
-        'year': str(year),
-        'month': str(month),
-    }
-
-    if lookup_agg and lookup_agg in agg_methods:
-        name['agg'] = agg_methods[lookup_agg]['discrim']
-
-    if lookup_summary and lookup_summary in summary_methods:
-        name['summary'] = summary_methods[lookup_summary]['discrim']
-
-    return name
-
 
 @click.command()
 @click.argument('trackercode')
@@ -818,6 +805,7 @@ def process(trackercode: str, year: str, agg_method: str, summary_method: str, m
 
     summary_callable: Callable[[geopandas.GeoDataFrame], BaseGeometry] = summary_methods[summary_method]['callable']
     summary_discrim: str = summary_methods[summary_method]['discrim']
+    summary_type: str = summary_methods[summary_method]['type']
 
     df = load_df(trackercode, year, jitter=jitter, round_decimals=round_decimals)
 
@@ -874,6 +862,7 @@ def process(trackercode: str, year: str, agg_method: str, summary_method: str, m
                     'species_aphia_id': species_aphia_id,
                     'year': str(year),
                     'month': "all" if is_all else str(imonth),
+                    'type': summary_type
                     # file_discriminant,
                     # summary_discrim
                 }
@@ -895,10 +884,13 @@ def process(trackercode: str, year: str, agg_method: str, summary_method: str, m
                     summary['species_scientific_name'] = species_scientific_name
                     summary['species_aphia_id'] = species_aphia_id
 
-                    # if this is the "all", find the range
+                    # if this is the "all", find the range (distribution only)
                     if is_all:
-                        range_low = max(range_low, summary['level'].min())
-                        range_high = min(range_high, summary['level'].max())
+                        try:
+                            range_low = max(range_low, summary['level'].min())
+                            range_high = min(range_high, summary['level'].max())
+                        except:
+                            pass
 
                     if buffer:
                         summary = summary.buffer(buffer)
