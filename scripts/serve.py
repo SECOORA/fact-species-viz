@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from . import tasks
-from .cache import get_projects_for_species, read_cache, get_species_ids, get_species_months, get_species_years
+from .cache import get_projects_for_species, read_cache, get_species_ids, get_species_months, get_species_years, get_data_inventory
 from .log import logger
 from .utils import ATPType, get_atp_cache_key
 
@@ -36,27 +36,32 @@ async def process_atp_project(project_code: str, year: int, type: ATPType):
     return ret_val
 
 
-@app.get('/atp/species')
-async def get_species():
-    """
-    Gets list of species aphia ids.
-    """
-    return get_species_ids()
+# @app.get('/atp/species')
+# async def get_species():
+#     """
+#     Gets list of species aphia ids.
+#     """
+#     return get_species_ids()
 
 
-@app.get('/atp/species/{aphia_id}/years')
-async def species_years(aphia_id: int):
-    return get_species_years(aphia_id)
+# @app.get('/atp/species/{aphia_id}/years')
+# async def species_years(aphia_id: int):
+#     return get_species_years(aphia_id)
 
 
-@app.get('/atp/species/{aphia_id}/{year}')
-async def species_months(aphia_id: int, year: int):
-    return get_species_months(aphia_id, year)
+# @app.get('/atp/species/{aphia_id}/{year}')
+# async def species_months(aphia_id: int, year: int):
+#     return get_species_months(aphia_id, year)
 
 
-@app.get('/atp/projects/{aphia_id}')
-async def species_projects(aphia_id: int):
-    return get_projects_for_species(aphia_id)
+# @app.get('/atp/projects/{aphia_id}')
+# async def species_projects(aphia_id: int):
+#     return get_projects_for_species(aphia_id)
+
+
+@app.get('/atp/inventory')
+async def data_inventory():
+    return get_data_inventory()
 
 
 @app.get('/atp/{aphia_id}/{type}/{year}')

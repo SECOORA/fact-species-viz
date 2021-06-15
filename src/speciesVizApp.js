@@ -23,15 +23,8 @@ function SpeciesVizApp(props) {
     location = useLocation(),
     history = useHistory();
 
-  // TODO: replace with inventory
-  const [allAphiaIds, setAllAphiaIds] = useState([]);
-  const [allSpeciesNames, setAllSpeciesNames] = useState([]);
-  const [speciesProjects, setSpeciesProjects] = useState([]);
-  const [availYears, setAvailYears] = useState([]);
-  const [availMonths, setAvailMonths] = useState([]);
-
+  const [dataInventory, setDataInventory] = useState([]);
   const [maxLevels, setMaxLevels] = useState({}); // layerKey -> maximum
-
   const [layerData, setLayerData] = useState([
     {
       layerKey: "ooba",
@@ -94,44 +87,24 @@ function SpeciesVizApp(props) {
   // }, [location])
 
   useEffect(() => {
-    async function getAphiaIds() {
-      const response = await axios.get(`${process.env.DATA_URL}/atp/species`);
-      const [aphiaIds, names] = _.unzip(_.map(response.data, (v, k) => [parseInt(k), v]));
-      setAllAphiaIds(aphiaIds);
-      setAllSpeciesNames(names);
+    async function getInventory() {
+      const response = await axios.get(`${process.env.DATA_URL}/atp/inventory`);
+      setDataInventory(response.data);
     }
-
-    getAphiaIds();
+    getInventory();
   }, []);
 
-  useEffect(() => {
-    setSpeciesProjects([]);
-
-    async function getProjects() {
-      const response = await axios.get(`${process.env.DATA_URL}/atp/projects/${layerData[activeIdx].aphiaId}`);
-      setSpeciesProjects(response.data)
-    }
-
-    getProjects();
-  }, [layerData[activeIdx].aphiaId])
-
-  useEffect(() => {
-    async function getYears() {
-      const response = await axios.get(`${process.env.DATA_URL}/atp/species/${layerData[activeIdx].aphiaId}/years`);
-      setAvailYears(response.data)
-    }
-
-    getYears();
-  }, [layerData[activeIdx].aphiaId])
-
-  useEffect(() => {
-    async function getMonths() {
-      const response = await axios.get(`${process.env.DATA_URL}/atp/species/${layerData[activeIdx].aphiaId}/${layerData[activeIdx].year}`);
-      setAvailMonths(response.data)
-    }
-
-    getMonths();
-  }, [layerData[activeIdx].aphiaId, layerData[activeIdx].year])
+  const speciesLookup = useMemo(() => {
+    return _.fromPairs(dataInventory.map(di => {
+      return [
+        di.aphiaId,
+        {
+          commonName: di.speciesCommonName,
+          scientificName: di.speciesScientificName
+        }
+      ]
+    }))
+  }, [dataInventory])
 
   const onLayerUpdate = (newLayer) => {
     const newLayerData = layerData.map((ld, idx) => {
@@ -291,7 +264,7 @@ function SpeciesVizApp(props) {
                   onClick={() => setActiveIdx(idx)}
                   isActive={idx === activeIdx}
                   {...ld}
-                  speciesName={allSpeciesNames[allAphiaIds.indexOf(ld.aphiaId)]}
+                  speciesName={speciesLookup[ld.aphiaId]?.commonName}
                   onLayerUp={() => moveLayer(idx, -1)}
                   onLayerDown={() => moveLayer(idx, 1)}
                   enableLayerUp={idx > 0}
@@ -308,11 +281,7 @@ function SpeciesVizApp(props) {
           <LayerEditor
             notifyUpdate={onLayerUpdate}
             currentLayer={layerData[activeIdx]}
-            allAphiaIds={allAphiaIds}
-            allSpeciesNames={allSpeciesNames}
-            speciesProjects={speciesProjects}
-            availYears={availYears}
-            availMonths={availMonths}
+            dataInventory={dataInventory}
           />
         </div>
       </div>

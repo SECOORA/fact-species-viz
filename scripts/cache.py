@@ -1,4 +1,5 @@
 import json
+from collections import defaultdict
 from json.decoder import JSONDecodeError
 from typing import Any, Dict, Optional, Mapping, Sequence
 
@@ -105,3 +106,67 @@ def get_projects_for_species(aphia_id: int) -> Sequence[str]:
         ret.add(project_code)
 
     return sorted(ret)
+
+
+def get_data_inventory() -> Sequence[Any]:
+    """
+    Gets a data inventory for the entire frontend to be seeded with.
+
+    Top level is an array of species information.
+    """
+    assert r
+
+    # get all common names
+    common_data = {int(k.decode('utf-8')):v.decode('utf-8') for k, v in r.hgetall("species:common").items()}
+
+    # get all scientific names
+    scientific_data = {int(k.decode('utf-8')):v.decode('utf-8') for k, v in r.hgetall("species:scientific").items()}
+
+    # start structure building
+    species = {}        # aphia id key, data underneath
+
+    # get all data keys
+    v = r.keys("data:*:*:*:*:*")
+    for vv in v:
+        _, aphia_id_s, dtype, year_s, month_s, project = vv.decode('utf-8').split(":")
+
+        # can always assume an all, and there will always be one defined month for the same year
+        if month_s == 'all':
+            continue
+
+        aphia_id = int(aphia_id_s)
+        month = int(month_s)
+        year = int(year_s)
+
+        if not aphia_id in species:
+            species[aphia_id] = {
+                'speciesCommonName': common_data.get(aphia_id, 'Unknown'),
+                'speciesScientificName': scientific_data.get(aphia_id, 'Unknown'),
+                'byProject': defaultdict(lambda: defaultdict(lambda: []))     # key project name -> year [] -> month
+            }
+
+        species[aphia_id]['byProject'][project][year].append(month)
+
+    # transform from dicts (used for collection) to lists
+    transformed = [
+        {
+            'aphiaId': aphia_id,
+            'speciesCommonName': data['speciesCommonName'],
+            'speciesScientificName': data['speciesScientificName'],
+            'byProject': {
+                projectCode: {
+                    'years': [
+                        {
+                            'year': year,
+                            'months': sorted(months)
+                        }
+                        for year, months in sorted(projectData.items(), key=lambda t: t[0])
+                    ]
+                }
+                for projectCode, projectData in data['byProject'].items()
+            }
+        }
+        for aphia_id, data in species.items()
+    ]
+
+    return transformed
