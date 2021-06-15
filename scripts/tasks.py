@@ -14,7 +14,7 @@ from .cache import write_cache, update_species_common_name, update_species_scien
 from .process import process
 
 
-app = Celery('atp', broker=CONFIG.redis_dsn)
+app = Celery('atp', broker=CONFIG.redis_celery_dsn)
 
 
 @app.task

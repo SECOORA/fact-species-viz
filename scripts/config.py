@@ -6,7 +6,8 @@ from pydantic import BaseSettings, Field, RedisDsn
 
 class Configuration(BaseSettings):
     """Represents the project configuration."""
-    redis_dsn: RedisDsn = 'redis://:atp@redis:6379/1'
+    redis_cache_dsn: RedisDsn = 'redis://:atp@redis:6379/1'
+    redis_celery_dsn: RedisDsn = 'redis://:atp@redis:6379/0'
 
     class Config:
         """Configuration meta class."""

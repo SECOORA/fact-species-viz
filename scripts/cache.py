@@ -8,7 +8,7 @@ from redis import Redis
 from .config import CONFIG
 
 
-r = Redis.from_url(str(CONFIG.redis_dsn))
+r = Redis.from_url(str(CONFIG.redis_cache_dsn))
 
 
 def write_cache(key: str, value: Any) -> int:
