@@ -64,6 +64,11 @@ async def data_inventory():
     return get_data_inventory()
 
 
+@app.get('/atp/citations')
+async def citations():
+    return get_citations()
+
+
 @app.get('/atp/{aphia_id}/{type}/{year}')
 async def get_atp_data(aphia_id: int, year: int, type: ATPType, month: Optional[int] = None, project: Optional[str]=None):
     kwargs = {

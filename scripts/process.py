@@ -14,6 +14,7 @@ import geojson
 import geopandas
 import orjson
 import pyvisgraph as vg
+import requests
 from shapely.geometry import asPolygon, box, LineString, MultiPoint, Point, Polygon, MultiPolygon, geo
 from shapely.geometry.base import BaseGeometry
 from shapely.ops import unary_union
@@ -232,7 +233,7 @@ def build_vis_graph(filename: str=None) -> vg.VisGraph:
         return g
 
     if not filename:
-        filename = "/home/daf/dev/mapvamber-daf/secoora-land.geojson" # @TODO
+        filename = "data/secoora-land.geojson"
 
     with open(filename) as f:
         gj = geojson.load(f)
@@ -881,7 +882,8 @@ def process(trackercode: str, year: str, agg_method: str, summary_method: str, m
                     'species_aphia_id': species_aphia_id,
                     'year': str(year),
                     'month': "all" if is_all else str(imonth),
-                    'type': summary_type
+                    'type': summary_type,
+                    **get_multiple_metadata(cur_metadata)       # will join all metadata by newlines for every project
                     # file_discriminant,
                     # summary_discrim
                 }
@@ -902,6 +904,7 @@ def process(trackercode: str, year: str, agg_method: str, summary_method: str, m
                     summary['species_common_name'] = species_common_name
                     summary['species_scientific_name'] = species_scientific_name
                     summary['species_aphia_id'] = species_aphia_id
+                    # @TODO: add metadata per polygon?
 
                     # if this is the "all", find the range (distribution only)
                     if is_all:
@@ -1056,6 +1059,51 @@ def cmocean_to_mapbox(cmap, inc=0.1):
         out.append(f"rgba({','.join(rgb)})")
 
     return out
+
+
+def get_project_metadata(project_code: str, force: bool=False) -> Dict:
+    """
+    Gets certain pieces of project metadata from OTN's geoserver.
+    """
+    saved = Path('data/project-metadata.geojson')
+    if saved.exists() and not force:
+        with saved.open() as f:
+            data = json.load(f)
+    else:
+        r = requests.get("https://members.devel.oceantrack.org/geoserver/otnunit/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=otnunit:otn_resources_metadata&outputFormat=application/json&CQL_FILTER=seriescode%20=%20%27FACT%27")
+        r.raise_for_status()
+
+        raw_data = r.json()
+
+        data = {
+            f['properties']['collectioncode'][5:]: {
+                'shortname': f['properties']['shortname'],
+                'citation': f['properties']['citation'],
+                'website': f['properties']['website']
+            } for f in raw_data['features']
+        }
+
+        with saved.open('w') as f:
+            json.dump(data, f)
+
+    return data.get(project_code, {})
+
+
+def get_multiple_metadata(project_codes: Sequence[str]) -> Dict:
+    """
+    Gets metadata for more than one project, merges them together.
+    """
+    mds = [get_project_metadata(pc) for pc in project_codes]
+
+    shortnames = "\n".join([m['shortname'] for m in mds])
+    citations = "\n".join([m['citation'] for m in mds])
+    websites = "\n".join([m['website'] or '' for m in mds])
+
+    return {
+        'shortname': shortnames,
+        'citation': citations,
+        'website': websites
+    }
 
 
 if __name__ == "__main__":

@@ -170,3 +170,31 @@ def get_data_inventory() -> Sequence[Any]:
     ]
 
     return transformed
+
+
+def update_citations(project_code: str, shortname: str, citation: str, website: str):
+    """
+    Updates citation information for the given project.
+    """
+    r.hset(f"citations:{project_code}", 'shortname', shortname)
+    r.hset(f"citations:{project_code}", 'citation', citation)
+    r.hset(f"citations:{project_code}", 'website', website)
+
+
+def get_citations():
+    """
+    Retrieves all citations in a dict.
+    """
+    ret = {}
+    v = r.keys("citations:*")
+    for vv in v:
+        _, project = vv.decode('utf-8').split(":")
+        md = {k.decode('utf-8'): v.decode('utf-8') for k, v in r.hgetall(f"citations:{project}").items()}
+
+        ret[project] = {
+            'shortname': md['shortname'],
+            'citation': md['citation'],
+            'website': md['website'] 
+        }
+
+    return ret
