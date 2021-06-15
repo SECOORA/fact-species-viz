@@ -564,11 +564,15 @@ def summary_raw(gdf: geopandas.GeoDataFrame, **kwargs) -> BaseGeometry:
     #return FeatureCollection([gi for gi in gdf.geometry])
     return geopandas.GeoSeries([gdf.unary_union])
 
-def summary_convex(gdf: geopandas.GeoDataFrame, **kwargs) -> geopandas.GeoSeries:
-    hull = geopandas.GeoSeries([gdf.unary_union]).convex_hull
+def summary_convex(gdf: geopandas.GeoDataFrame, **kwargs) -> geopandas.GeoDataFrame:
+    feat = buffer_union(Feature(
+        smooth_polygon(gdf.unary_union.convex_hull),
+        {'level': 1}
+    ))
+    hull = geopandas.GeoDataFrame.from_features([feat])
     return hull
 
-def summary_concave(gdf: geopandas.GeoDataFrame, **kwargs) -> BaseGeometry:
+def summary_concave(gdf: geopandas.GeoDataFrame, **kwargs) -> geopandas.GeoDataFrame:
     month_df_points = np.unique(np.stack(
         (
             gdf['longitude'].to_numpy(),
@@ -579,12 +583,17 @@ def summary_concave(gdf: geopandas.GeoDataFrame, **kwargs) -> BaseGeometry:
     hullobj = ConcaveHull(month_df_points)
     if hullobj is not None:
         geom = asPolygon(hullobj.calculate())
-        buffered_geom = hullobj.buffer_in_meters(geom, 1000)
-        feat = buffer_union(Feature(
-            smooth_polygon(buffered_geom),
-            {'level': 1}
-        ))
-        return geopandas.GeoDataFrame.from_features([feat])
+        try:
+            # if the hull is busted, intentionally trigger an error to let it do convex below
+            _ = geom.area
+            buffered_geom = hullobj.buffer_in_meters(geom, 1000)
+            feat = buffer_union(Feature(
+                smooth_polygon(buffered_geom),
+                {'level': 1}
+            ))
+            return geopandas.GeoDataFrame.from_features([feat])
+        except TypeError:
+            pass
 
     # couldn't do concave? convex is close.
     print("WARN: could not do concave hull, returning convex", file=sys.stderr)
@@ -779,7 +788,8 @@ summary_methods = {
 @click.option("--jitter", type=float, default=None)
 @click.option("--round-decimals", type=int, default=None)
 @click.option("--to-disk/--no-to-disk", default=False)
-def do_process(trackercode: str, year: str, agg_method: str, summary_method: str, month: int, buffer: float, simplify: float, jitter: float, round_decimals: int, to_disk: bool):
+@click.option("--force/--no-force", default=False)
+def do_process(trackercode: str, year: str, agg_method: str, summary_method: str, month: int, buffer: float, simplify: float, jitter: float, round_decimals: int, to_disk: bool, force: bool):
     for d in process(
         trackercode,
         year,
@@ -789,7 +799,8 @@ def do_process(trackercode: str, year: str, agg_method: str, summary_method: str
         buffer=buffer,
         simplify=simplify,
         jitter=jitter,
-        round_decimals=round_decimals
+        round_decimals=round_decimals,
+        force=force
     ):
         if to_disk:
             fname = Path('out2') / Path("-".join((v for k, v in d['_metadata'].items())) + ".geojson")
@@ -799,7 +810,7 @@ def do_process(trackercode: str, year: str, agg_method: str, summary_method: str
         else:
             print(d)
 
-def process(trackercode: str, year: str, agg_method: str, summary_method: str, month: Optional[int]=None, buffer: Optional[float]=None, simplify: Optional[float]=None, jitter: Optional[float]=None, round_decimals: Optional[int]=None) -> Sequence[Dict[str, Any]]:
+def process(trackercode: str, year: str, agg_method: str, summary_method: str, month: Optional[int]=None, buffer: Optional[float]=None, simplify: Optional[float]=None, jitter: Optional[float]=None, round_decimals: Optional[int]=None, force: bool=False) -> Sequence[Dict[str, Any]]:
     agg_callable: Callable[[pd.DataFrame], geopandas.GeoDataFrame] = agg_methods[agg_method]['callable']
     file_discriminant: str = agg_methods[agg_method]['discrim']
 
@@ -816,20 +827,28 @@ def process(trackercode: str, year: str, agg_method: str, summary_method: str, m
 
     for species_name_triple, sdf in species_groups:
         print(species_name_triple, len(sdf), file=sys.stderr)
+        species_aphia_id, species_common_name, species_scientific_name = species_name_triple
 
-        gdf = agg_callable(sdf)
-        gdf = gdf.assign(project_code=trackercode)     # provenance for this intermediate data
+        cachename = f"cache/{trackercode}-{year}-{species_aphia_id}.geojson"
+        cache_path = Path(cachename)
+        if cache_path.exists() and not force:
+            with cache_path.open() as f:
+                print(f"> reading from cache {cachename}", file=sys.stderr)
+                gdf = geopandas.read_file(f, driver="GeoJSON")
+                gdf['datecollected'] = gdf['datecollected'].apply(pd.to_datetime)
+                gdf.set_index('monthcollected', inplace=True)
+        else:
+
+            gdf = agg_callable(sdf)
+            gdf = gdf.assign(project_code=trackercode)     # provenance for this intermediate data
+
+            # cache the aggregate output for future use (combining with same species from different projects)
+            # TODO: can this go in redis somehow
+            to_disk(gdf.reset_index(), cachename)
+            print(f"> caching {cachename}", file=sys.stderr)
 
         range_low = -math.inf
         range_high = math.inf
-
-        species_aphia_id, species_common_name, species_scientific_name = species_name_triple
-
-        # cache the aggregate output for future use (combining with same species from different projects)
-        # TODO: can this go in redis somehow
-        cachename = f"cache/{trackercode}-{year}-{species_aphia_id}.geojson"
-        to_disk(gdf.reset_index(), cachename)
-        print(cachename, file=sys.stderr)
 
         frames_and_metadata = [
             (gdf, [trackercode])

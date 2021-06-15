@@ -142,10 +142,10 @@ def get_data_inventory() -> Sequence[Any]:
             species[aphia_id] = {
                 'speciesCommonName': common_data.get(aphia_id, 'Unknown'),
                 'speciesScientificName': scientific_data.get(aphia_id, 'Unknown'),
-                'byProject': defaultdict(lambda: defaultdict(lambda: []))     # key project name -> year [] -> month
+                'byProject': defaultdict(lambda: defaultdict(lambda: set()))     # key project name -> year [] -> month, use a set because we're getting both distribution/range keys back
             }
 
-        species[aphia_id]['byProject'][project][year].append(month)
+        species[aphia_id]['byProject'][project][year].add(month)
 
     # transform from dicts (used for collection) to lists
     transformed = [
