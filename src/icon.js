@@ -8,12 +8,14 @@ export const IconBase = ({
 	extraClasses = '',
 	size = 6,
 	onClick,
-  enabled = true
+  enabled = true,
+  tooltip
 }) => {
 	return (
     <div
       className={classNames("cursor-pointer px-2", extraClasses, {
         "text-gray-300 cursor-not-allowed": !enabled,
+        "has-tooltip": tooltip,
       })}
       onClick={(e) => {
         if (!enabled) {
@@ -23,6 +25,7 @@ export const IconBase = ({
         onClick();
       }}
     >
+      {tooltip && enabled && <span className="tooltip">{tooltip}</span>}
       <svg
         xmlns="http://www.w3.org/2000/svg"
         className={`h-${size} w-${size}`}

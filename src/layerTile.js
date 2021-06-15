@@ -70,16 +70,19 @@ const LayerTile = (props) => {
             size={4}
             onClick={props.onLayerUp}
             enabled={props.enableLayerUp}
+            tooltip="Move Layer Up"
           />
           <IconDown
             size={4}
             onClick={props.onLayerDown}
             enabled={props.enableLayerDown}
+            tooltip="Move Layer Down"
           />
           <IconDuplicate
             size={4}
             onClick={props.onLayerDuplicate}
             enabled={props.enableDuplicate}
+            tooltip="Duplicate Layer"
           />
           {/* <IconExpand size={4} enabled={true} /> */}
           <IconTrash
@@ -87,6 +90,7 @@ const LayerTile = (props) => {
             onClick={props.onLayerDelete}
             extraClasses={""}
             enabled={props.enableDelete}
+            tooltip="Delete Layer"
           />
         </div>
       </div>
