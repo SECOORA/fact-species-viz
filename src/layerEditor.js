@@ -4,6 +4,7 @@ import _ from 'lodash';
 
 import Chooser from "./chooser.js";
 import Palettes from "./palettes.js";
+import {IconLeft, IconRight} from "./icon.js";
 
 const LayerEditor = (props) => {
 
@@ -13,41 +14,38 @@ const LayerEditor = (props) => {
       ...value
     };
 
-    // if either species or project change, the year/month availability might not be the same
     // auto-adjust both year and month to a closest available one
-    if (value.hasOwnProperty('aphiaId') || value.hasOwnProperty('project')) {
-      const invItem = _.find(props.dataInventory, (v) => v.aphiaId === updatedLayer.aphiaId),
-        yearData = invItem.byProject[updatedLayer.project]?.years;
+    const invItem = _.find(props.dataInventory, (v) => v.aphiaId === updatedLayer.aphiaId),
+      yearData = invItem.byProject[updatedLayer.project]?.years;
 
-      if (!yearData) {
-        console.warn("updateLayer could not find project", updatedLayer, "for", updatedLayer.aphiaId);
-        return;
-      }
+    if (!yearData) {
+      console.warn("updateLayer could not find project", updatedLayer, "for", updatedLayer.aphiaId);
+      return;
+    }
 
-      let newYear = updatedLayer.year;
-      const availYears = yearData.map(yd => yd.year),
-        okYear = availYears.indexOf(newYear) !== -1;
+    let newYear = updatedLayer.year;
+    const availYears = yearData.map(yd => yd.year),
+      okYear = availYears.indexOf(newYear) !== -1;
 
-      if (!okYear) {
-        // if the year doesn't exist, we'll need to change the year (and likely the month)
+    if (!okYear) {
+      // if the year doesn't exist, we'll need to change the year (and likely the month)
 
-        // get the closest years by taking difference from expected year, we might have two 1s if say a gap exists
-        // ie we're currently on 2016 and (2015 yes, 2016 no, 2017 yes) is the situation, and that's ok, we just need any valid year
-        const closestYears = _.sortBy(availYears, y => Math.abs(y - newYear));
-        newYear = closestYears[0];
+      // get the closest years by taking difference from expected year, we might have two 1s if say a gap exists
+      // ie we're currently on 2016 and (2015 yes, 2016 no, 2017 yes) is the situation, and that's ok, we just need any valid year
+      const closestYears = _.sortBy(availYears, y => Math.abs(y - newYear));
+      newYear = closestYears[0];
 
-      }
+    }
 
-      // now, adjust month if necessary.
-      let newMonth = updatedLayer.month;
-      if (newMonth !== 'all') {
-        const newYearData = _.find(yearData, (yd) => yd.year === newYear),
-          okMonth = newYearData.months.indexOf(newMonth) !== -1;
+    // now, adjust month if necessary.
+    let newMonth = updatedLayer.month;
+    if (newMonth !== 'all') {
+      const newYearData = _.find(yearData, (yd) => yd.year === newYear),
+        okMonth = newYearData.months.indexOf(newMonth) !== -1;
 
-        if (!okMonth) {
-          const closestMonths = _.sortBy(newYearData.months, m => Math.abs(m - newMonth));
-          newMonth = closestMonths[0];
-        }
+      if (!okMonth) {
+        const closestMonths = _.sortBy(newYearData.months, m => Math.abs(m - newMonth));
+        newMonth = closestMonths[0];
       }
 
       // update the layer with new year/month (might be the same)
@@ -105,6 +103,53 @@ const LayerEditor = (props) => {
     return yearData?.months;
   }, [props.dataInventory, props.currentLayer.aphiaId, props.currentLayer.year, props.currentLayer.project]);
 
+  const changeYear = (direction = 1) => {
+    const invItem = _.find(props.dataInventory, (v) => v.aphiaId === props.currentLayer.aphiaId),
+      projectData = invItem.byProject[props.currentLayer.project],
+      availYears = projectData.years.map(yd => yd.year),
+      curIdx = availYears.indexOf(props.currentLayer.year);
+
+    if (curIdx === 0 && direction === -1) {
+      return;
+    }
+    if (curIdx === availYears.length - 1 && direction === 1) {
+      return;
+    }
+
+    const newYear = availYears[curIdx + direction];
+
+    _updateLayer({
+      year: newYear
+    })
+  }
+
+  const changeMonth = (direction = 1) => {
+    if (props.currentLayer.month === 'all') {
+      return;
+    }
+
+    const invItem = _.find(props.dataInventory, (v) => v.aphiaId === props.currentLayer.aphiaId),
+      projectData = invItem.byProject[props.currentLayer.project],
+      availYears = projectData.years.map(yd => yd.year),
+      curYear = _.find(projectData.years, (v) => v.year === props.currentLayer.year),
+      availMonths = curYear.months,
+      curIdx = availMonths.indexOf(props.currentLayer.month);
+
+    if (curIdx === 0 && direction === -1) {
+      // @TODO: wrap
+      return;
+    }
+    if (curIdx === availMonths.length - 1 && direction === 1) {
+      // @TODO: wrap
+      return;
+    }
+
+    const newMonth = availMonths[curIdx + direction];
+    _updateLayer({
+      month: newMonth
+    });
+  }
+
 	return (
     <div className="w-64 bg-gray-400 p-2 h-full">
       <Chooser
@@ -132,19 +177,23 @@ const LayerEditor = (props) => {
         onClick={(v) => _updateLayer({ year: v })}
         curVal={props.currentLayer.year}
         label="Year"
+        before={<IconLeft size={4} onClick={() => changeYear(-1)} />}
+        after={<IconRight size={4} onClick={() => changeYear(1)} />}
       />
 
       <Chooser
         items={[...Array(12).keys(), "all"].map((m) =>
           m !== "all" ? m + 1 : m
         )}
-        enabledItems={[...availMonths, "all"]}
+        enabledItems={[...availMonths || [], "all"]}
         onClick={(v) => _updateLayer({ month: v })}
         curVal={props.currentLayer.month}
         label="Month"
+        before={<IconLeft size={4} onClick={() => changeMonth(-1)} extraClasses="" />}
+        after={<IconRight size={4} onClick={() => changeMonth(1)} />}
       />
 
-      <hr />
+      <hr className="my-2" />
 
       <Chooser
         items={Object.keys(Palettes)}

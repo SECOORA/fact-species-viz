@@ -102,3 +102,11 @@ export const IconExpand = (props) => {
     />
   );
 }
+
+export const IconLeft = (props) => {
+  return <IconBase path="M15 19l-7-7 7-7" {...props} />;
+}
+
+export const IconRight = (props) => {
+  return <IconBase path="M9 5l7 7-7 7" {...props} />;
+}
