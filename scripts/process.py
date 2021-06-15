@@ -113,7 +113,7 @@ def animal_boxes(df: pd.DataFrame) -> geopandas.GeoDataFrame:
     return gdf
 
 
-def get_interp_line(lon_start: float, lat_start: float, lon_end: float, lat_end: float, method: str='simple') -> LineString:
+def get_interp_line(lon_start: float, lat_start: float, lon_end: float, lat_end: float, method: str='visgraph') -> LineString:
     """
     Creates a line from start to end.
     """
