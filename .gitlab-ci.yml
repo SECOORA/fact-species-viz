@@ -41,6 +41,7 @@ deploy_staging_backend:
   only:
     - master
   script:
+    - docker pull registry.axiom/ansible
     - docker run --rm registry.axiom/ansible ap apps-stage atp-server --tags deploy
 
 stop_staging_backend:
@@ -52,6 +53,7 @@ stop_staging_backend:
     name: stage
     action: stop
   script:
+    - docker pull registry.axiom/ansible
     - docker run --rm registry.axiom/ansible ap apps-stage atp-server --tags deploy -e atp_server_state=stopped
 
 cleanup_staging_backend:
