@@ -217,6 +217,8 @@ function SpeciesVizApp(props) {
       return;
     }
 
+    const newLength = layerData.length - 1;
+
     // make sure we remove the scale levels for this layer
     setMaxLevels(curMaxLevels => {
       return _.omit(curMaxLevels, layerData[idx].layerKey);
@@ -227,6 +229,11 @@ function SpeciesVizApp(props) {
       copy.splice(idx, 1);
       return copy;
     })
+
+    // have to adjust the activeIdx if the delete makes it out of bounds
+    if (activeIdx >= newLength) {
+      setActiveIdx(newLength - 1);
+    }
   }
 
   return (
