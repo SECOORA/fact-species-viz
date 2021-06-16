@@ -258,8 +258,9 @@ const LayerEditor = (props) => {
         <label htmlFor="opacity" className="block text-sm">
           Opacity
         </label>
-        <div className="inline-block relative w-64">
+        <div className="inline-block relative w-full">
           <input
+            className="w-full"
             type="range"
             id="opacity"
             name="opacity"
