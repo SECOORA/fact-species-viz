@@ -9,7 +9,7 @@ build_staging_backend:
   only:
     - master
   script:
-    - docker build -t registry.axiom/atp-server:latest -f Dockerfile.backend
+    - docker build -t registry.axiom/atp-server:latest -f Dockerfile.backend .
 
 build_staging_frontend:
   stage: build
