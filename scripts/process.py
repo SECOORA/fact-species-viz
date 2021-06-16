@@ -31,11 +31,7 @@ except ImportError:
     from .hull import ConcaveHull
     
 from .fetch import get_all_tables
-
-
-# @TODO: CONFIG
-DATADIR = os.environ.get('AST_DATA_DIR', 'data')
-
+from .config import CONFIG
 
 # transform functions
 def raw(df: pd.DataFrame) -> geopandas.GeoDataFrame:
@@ -226,10 +222,10 @@ def animal_interpolated_paths(df: pd.DataFrame, interp_method: str="simple", max
 
 @cache
 def build_vis_graph(filename: str=None) -> vg.VisGraph:
-    saved = Path('data/landvisgraph.pk1')
+    saved = Path(CONFIG.data_dir) / Path('landvisgraph.pk1')
     if saved.exists():
         g = vg.VisGraph()
-        g.load('data/landvisgraph.pk1')
+        g.load(str(saved))
         return g
 
     if not filename:
@@ -249,7 +245,7 @@ def build_vis_graph(filename: str=None) -> vg.VisGraph:
     g = vg.VisGraph()
     g.build(polys, workers=4)
 
-    g.save('data/landvisgraph.pk1')
+    g.save(str(saved))
     return g
 
 
@@ -955,7 +951,7 @@ def load_df(trackercode: str, year: str, trim: bool=True, jitter: Optional[float
         kwargs['parse_dates'] = ['datecollected']
 
     need = True
-    p = Path(DATADIR) / Path(f"{trackercode}_{year}.csv")
+    p = Path(CONFIG.data_dir) / Path(f"{trackercode}_{year}.csv")
     if p.exists():
         # verify they have the species
         try:
@@ -1065,7 +1061,7 @@ def get_project_metadata(project_code: str, force: bool=False) -> Dict:
     """
     Gets certain pieces of project metadata from OTN's geoserver.
     """
-    saved = Path('data/project-metadata.geojson')
+    saved = Path(CONFIG.data_dir) / Path('project-metadata.geojson')
     if saved.exists() and not force:
         with saved.open() as f:
             data = json.load(f)

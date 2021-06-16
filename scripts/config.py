@@ -9,6 +9,8 @@ class Configuration(BaseSettings):
     redis_cache_dsn: RedisDsn = 'redis://:atp@redis:6379/1'
     redis_celery_dsn: RedisDsn = 'redis://:atp@redis:6379/0'
 
+    data_dir: str = "cache"
+
     class Config:
         """Configuration meta class."""
         env_file = '.env'
