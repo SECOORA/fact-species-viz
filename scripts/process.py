@@ -1093,7 +1093,7 @@ def get_multiple_metadata(project_codes: Sequence[str]) -> Dict:
     """
     Gets metadata for more than one project, merges them together.
     """
-    mds = [get_project_metadata(pc) for pc in project_codes]
+    mds = [md for md in (get_project_metadata(pc) for pc in project_codes) if md]
 
     shortnames = "\n".join([m['shortname'] for m in mds])
     citations = "\n".join([m['citation'] for m in mds])
