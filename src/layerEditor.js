@@ -48,13 +48,13 @@ const LayerEditor = (props) => {
         const closestMonths = _.sortBy(newYearData.months, m => Math.abs(m - newMonth));
         newMonth = closestMonths[0];
       }
+    }
 
-      // update the layer with new year/month (might be the same)
-      updatedLayer = {
-        ...updatedLayer,
-        year: newYear,
-        month: newMonth
-      }
+    // update the layer with new year/month (might be the same)
+    updatedLayer = {
+      ...updatedLayer,
+      year: newYear,
+      month: newMonth
     }
 
     props.notifyUpdate(updatedLayer);
