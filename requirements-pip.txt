@@ -1,4 +1,2 @@
 pyvisgraph
 shapely-geojson
-
-git+git://github.com/mher/flower.git@f60fff1822acacf5fe4a6f8c2afa9b917fd1dc3f
