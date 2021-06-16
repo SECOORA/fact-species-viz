@@ -31,7 +31,7 @@ function SpeciesVizApp(props) {
   const [layerData, setLayerData] = useState([
     {
       layerKey: "ooba",
-      aphiaId: 159353,
+      aphiaId: 105793,
       year: 2019,
       project: "_ALL",
       month: 'all',
