@@ -6,6 +6,7 @@ import Chooser from "./chooser.js";
 import Palettes from "./palettes.js";
 import {IconLeft, IconRight, IconZoom} from "./icon.js";
 import classNames from "classnames";
+import PaletteSwatch from "./paletteSwatch.js";
 
 const LayerEditor = (props) => {
 
@@ -198,22 +199,30 @@ const LayerEditor = (props) => {
 
       <div className="flex mx-2 my-4">
         <button
-          className={classNames("text-sm flex-grow rounded-r-none border-r-0  hover:scale-110 focus:outline-none flex justify-center px-4 py-2 rounded font-bold cursor-pointer",
-          {
-            "hover:bg-indigo-200 bg-indigo-100 text-indigo-700 border duration-200 ease-in-out border-indigo-600 transition": props.currentLayer.type === 'distribution',
-            "hover:bg-gray-200 bg-gray-100 text-gray-700 border duration-200 ease-in-out border-gray-600 transition": props.currentLayer.type !== 'distribution'
-          })}
-          onClick={() => _updateLayer({type: 'distribution'})}
+          className={classNames(
+            "text-sm flex-grow rounded-r-none border-r-0  hover:scale-110 focus:outline-none flex justify-center px-4 py-2 rounded font-bold cursor-pointer",
+            {
+              "hover:bg-indigo-200 bg-indigo-100 text-indigo-700 border duration-200 ease-in-out border-indigo-600 transition":
+                props.currentLayer.type === "distribution",
+              "hover:bg-gray-200 bg-gray-100 text-gray-700 border duration-200 ease-in-out border-gray-600 transition":
+                props.currentLayer.type !== "distribution",
+            }
+          )}
+          onClick={() => _updateLayer({ type: "distribution" })}
         >
           <div className="flex leading-5">Distribution</div>
         </button>
         <button
-          className={classNames("text-sm flex-grow rounded-l-none border-l-0  hover:scale-110 focus:outline-none flex justify-center px-4 py-2 rounded font-bold cursor-pointer",
-          {
-            "hover:bg-indigo-200 bg-indigo-100 text-indigo-700 border duration-200 ease-in-out border-indigo-600 transition": props.currentLayer.type === 'range',
-            "hover:bg-gray-200 bg-gray-100 text-gray-700 border duration-200 ease-in-out border-gray-600 transition": props.currentLayer.type !== 'range'
-          })}
-          onClick={() => _updateLayer({type: 'range'})}
+          className={classNames(
+            "text-sm flex-grow rounded-l-none border-l-0  hover:scale-110 focus:outline-none flex justify-center px-4 py-2 rounded font-bold cursor-pointer",
+            {
+              "hover:bg-indigo-200 bg-indigo-100 text-indigo-700 border duration-200 ease-in-out border-indigo-600 transition":
+                props.currentLayer.type === "range",
+              "hover:bg-gray-200 bg-gray-100 text-gray-700 border duration-200 ease-in-out border-gray-600 transition":
+                props.currentLayer.type !== "range",
+            }
+          )}
+          onClick={() => _updateLayer({ type: "range" })}
         >
           <div className="flex leading-5">Range</div>
         </button>
@@ -221,12 +230,29 @@ const LayerEditor = (props) => {
 
       <hr className="my-2" />
 
-      <Chooser
-        items={Object.keys(Palettes)}
-        onClick={(v) => _updateLayer({ palette: v })}
-        curVal={props.currentLayer.palette}
-        label="Palette"
-      />
+      <div className="mb-2">
+        <div className="text-sm mb-1">Palettes</div>
+        <div className="flex flex-wrap justify-around">
+          {Object.keys(Palettes).map((p) => {
+            return (
+              <div key={`pal-${p}`} className={classNames("p-1 rounded-md", {"bg-gray-400 shadow": p === props.currentLayer.palette})}>
+                <PaletteSwatch
+                  palette={p}
+                  size={7}
+                  // rounded={false}
+                  onClick={() => _updateLayer({ palette: p })}
+                  extraClasses={classNames("cursor-pointer", {
+                    "shadow-lg border-gray-700 border-2":
+                      p === props.currentLayer.palette,
+                    "shadow border border-gray-400":
+                      p !== props.currentLayer.palette,
+                  })}
+                />
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
       <div>
         <label htmlFor="opacity" className="block text-sm">
@@ -259,10 +285,12 @@ const LayerEditor = (props) => {
           />
         </div>
 
-        {speciesProjects.slice(1).map(sp => {
+        {speciesProjects.slice(1).map((sp) => {
           return (
             <div key={`cite-${sp}`} className="text-xs mb-1">
-              <div className="font-bold truncate">{props.citations[sp]?.shortname}</div>
+              <div className="font-bold truncate">
+                {props.citations[sp]?.shortname}
+              </div>
               <div className="truncate">{props.citations[sp]?.citation}</div>
               {props.citations[sp]?.website && (
                 <a href={props.citations[sp]?.website} target="_blank">
@@ -272,7 +300,6 @@ const LayerEditor = (props) => {
             </div>
           );
         })}
-
       </div>
     </div>
   );
