@@ -12,7 +12,8 @@ from .utils import ATPType, get_atp_cache_key
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost", "http://localhost:1234"],    # @TODO: uh more urls here
+    allow_origins=["http://localhost", "http://localhost:1234", "https://stage-atp-site.srv.axds.co", "http://stage-atp-site.srv.axiomptk",
+                   "https://atp-site.srv.axds.co", "http://atp-site.srv.axiomptk", "https://secoora.org", "https://www.secoora.org"],
     allow_credentials=True,
     allow_methods=['*'],
     allow_headers=['*']
