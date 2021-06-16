@@ -231,7 +231,7 @@ const LayerEditor = (props) => {
       <hr className="my-2" />
 
       <div className="mb-2">
-        <div className="text-sm mb-1">Palettes</div>
+        <div className="text-sm mb-1">Palette</div>
         <div className="flex flex-wrap justify-around">
           {Object.keys(Palettes).map((p) => {
             return (
