@@ -3,9 +3,48 @@ networks:
   default:
     external:
       name: axds
+volumes:
+  atp_cache:
 services:
   redis:
     image: redis:6.2.1-alpine
     command: redis-server --requirepass atp
     ports:
       - '127.0.0.1:${ATP_REDIS_PORT:-46379}:6379'
+
+  service:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    image: atp
+    ports:
+      - '127.0.0.1:${ATP_SERVICE_PORT:-47000}:7000'
+    depends_on:
+      - redis
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    environment:
+      DB_PASSWORD: "${DB_PASSWORD}"
+      DB_USER: "${DB_USER}"
+      DB_HOST: "${DB_HOST}"
+      DB_PORT: "${DB_PORT}"
+      DB_DATABASE: "${DB_DATABASE}"
+    volumes:
+      - atp_cache:/data
+
+    command: celery -A scripts.tasks worker --loglevel=INFO
+    depends_on:
+      - redis
+
+  flower:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    command: celery -A scripts.tasks flower
+    ports:
+      - '127.0.0.1:${ATP_FLOWER_PORT:-45555}:5555'
+    depends_on:
+      - redis

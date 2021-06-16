@@ -1,5 +1,6 @@
-data
+# data
+cache
 out
 node_modules
-scripts
+# scripts
 tmp

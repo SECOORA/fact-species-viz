@@ -1,0 +1,29 @@
+FROM continuumio/miniconda3:4.9.2
+LABEL MAINTAINER="Dave Foster <dave@axds.co>"
+
+COPY environment.yml /tmp
+COPY requirements-pip-manual.txt /tmp
+RUN --mount=type=cache,target=/opt/conda/pkgs conda update -n base -y conda && conda config --add channels conda-forge && conda install --yes -q mamba && \
+	mamba env create -f /tmp/environment.yml && \
+	/opt/conda/envs/fact-species-viz/bin/pip install -r /tmp/requirements-pip-manual.txt && \
+	mamba clean --all --yes
+
+RUN useradd -ms /bin/bash atp
+
+RUN mkdir /app
+WORKDIR /app
+
+RUN mkdir /data
+RUN chown -R atp:atp /data
+ENV ATP_DATA_DIR=/data
+ENV WORKER_CONCURRENCY=4
+
+EXPOSE 7000
+
+COPY scripts /app/scripts
+COPY data /app/data
+RUN chown -R atp:atp /app
+
+ENTRYPOINT ["/opt/conda/envs/fact-species-viz/bin/python", "-m"]
+CMD ["uvicorn", "scripts.serve:app", "--host", "0.0.0.0", "--port", "7000"]
+USER atp
