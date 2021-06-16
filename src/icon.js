@@ -14,7 +14,7 @@ export const IconBase = ({
 	return (
     <div
       className={classNames("cursor-pointer px-2", extraClasses, {
-        "text-gray-300 cursor-not-allowed": !enabled,
+        "text-gray-400 cursor-not-allowed": !enabled,
         "has-tooltip": tooltip,
       })}
       onClick={(e) => {
@@ -47,7 +47,7 @@ export const IconBase = ({
 IconBase.propTypes = {
 	path: PropTypes.string.isRequired,
 	extraClasses: PropTypes.string,
-	size: PropTypes.number,
+	size: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
 	onClick: PropTypes.func,
   enabled: PropTypes.bool
 }
@@ -115,6 +115,15 @@ export const IconZoom = (props) => {
   return (
     <IconBase
       path="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"
+      {...props}
+    />
+  )
+}
+
+export const IconPlus = (props) => {
+  return (
+    <IconBase
+      path="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"
       {...props}
     />
   )

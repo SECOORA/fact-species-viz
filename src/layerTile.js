@@ -29,7 +29,7 @@ const LayerTile = (props) => {
   return (
     <div
       className={classNames("w-64 mt-1 rounded-sm", {
-        "bg-gray-400 border-l border-t border-b border-gray-500":
+        "bg-gray-300 border-l border-t border-b border-gray-600":
           props.isActive,
         "bg-white border-l border-t border-b border-white shadow":
           !props.isActive,

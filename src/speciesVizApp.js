@@ -11,6 +11,7 @@ import LayerTile from "./layerTile.js";
 import LayerEditor from "./layerEditor.js";
 import Legend from "./legend.js";
 import Palettes from "./palettes.js";
+import {IconPlus} from "./icon.js";
 
 const getRandomItem = (iterable) => iterable[Math.floor(Math.random() * iterable.length)]
 
@@ -271,11 +272,14 @@ function SpeciesVizApp(props) {
             className="tileholder flex flex-col absolute"
             style={{ left: "-16rem" }}
           >
-            <div
-              className="w-16 h-16 bg-indigo-700 self-end text-4xl cursor-pointer text-white"
-              onClick={() => {addLayer()}}
-            >
-              +
+            <div className="w-16 h-16 bg-indigo-700 self-end text-4xl cursor-pointer text-white flex justify-center">
+              <IconPlus
+                extraClasses="flex-grow hover:text-indigo-200"
+                size="full"
+                onClick={() => {
+                  addLayer();
+                }}
+              />
             </div>
 
             {layerData.map((ld, idx) => {
@@ -314,7 +318,7 @@ function SpeciesVizApp(props) {
           citations={citations}
           showCitations={showCitations}
           onClose={() => setShowCitations([])}
-          />
+        />
       )}
     </div>
   );
