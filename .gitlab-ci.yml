@@ -16,7 +16,7 @@ build_staging_frontend:
   only:
     - master
   script:
-    - docker build -t registry.axiom/atp-site:latest --build-arg MAPBOX_TOKEN=$MAPBOX_TOKEN --build-arg DATA_URL=https://stage-atn-server.srv.axds.co .
+    - docker build -t registry.axiom/atp-site:latest --build-arg MAPBOX_TOKEN=$MAPBOX_TOKEN --build-arg DATA_URL=https://stage-atp-server.srv.axds.co .
 
 push_staging_backend:
   stage: push
