@@ -16,7 +16,7 @@ build_staging_frontend:
   only:
     - master
   script:
-    - docker build -t registry.axiom/atp-frontend:latest --build-arg MAPBOX_TOKEN=$MAPBOX_TOKEN --build-arg DATA_URL=$DATA_URL .
+    - docker build -t registry.axiom/atp-site:latest --build-arg MAPBOX_TOKEN=$MAPBOX_TOKEN --build-arg DATA_URL=https://stage-atn-server.srv.axds.co .
 
 push_staging_backend:
   stage: push
@@ -30,7 +30,7 @@ push_staging_frontend:
   only:
     - master
   script:
-    - docker push registry.axiom/atp-frontend:latest
+    - docker push registry.axiom/atp-site:latest
 
 deploy_staging_backend:
   stage: deploy
@@ -44,6 +44,18 @@ deploy_staging_backend:
     - docker pull registry.axiom/ansible
     - docker run --rm registry.axiom/ansible ap apps-stage atp-server --tags deploy
 
+deploy_staging_frontend:
+  stage: deploy
+  environment:
+    name: stage-frontend
+    url: http://stage-atp-site.srv.axds.co
+    on_stop: stop_staging_frontend
+  only:
+    - master
+  script:
+    - docker pull registry.axiom/ansible
+    - docker run --rm registry.axiom/ansible ap apps-stage atp-site --tags deploy
+
 stop_staging_backend:
   stage: deploy
   only:
@@ -56,9 +68,28 @@ stop_staging_backend:
     - docker pull registry.axiom/ansible
     - docker run --rm registry.axiom/ansible ap apps-stage atp-server --tags deploy -e atp_server_state=stopped
 
+stop_staging_frontend:
+  stage: deploy
+  only:
+    - master
+  when: manual
+  environment:
+    name: stage-frontend
+    action: stop
+  script:
+    - docker pull registry.axiom/ansible
+    - docker run --rm registry.axiom/ansible ap apps-stage atp-site --tags deploy -e atp_site_state=stopped
+
 cleanup_staging_backend:
   stage: cleanup
   only:
     - master
   script:
     - docker rmi --no-prune registry.axiom/atp-server:latest
+
+cleanup_staging_frontend:
+  stage: cleanup
+  only:
+    - master
+  script:
+    - docker rmi --no-prune registry.axiom/atp-site:latest
