@@ -8,6 +8,7 @@ jinjasql
 numpy
 orjson
 pandas
+psycopg2
 pydantic
 pyproj
 redis-py

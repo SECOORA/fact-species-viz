@@ -142,6 +142,7 @@ dependencies:
   - proj=8.0.1=h277dcde_0
   - prompt-toolkit=3.0.18=pyha770c72_0
   - prompt_toolkit=3.0.18=hd8ed1ab_0
+  - psycopg2=2.8.6=py39h3811e60_3
   - pycparser=2.20=pyh9f0ad1d_2
   - pydantic=1.8.2=py39h3811e60_0
   - pyopenssl=20.0.1=pyhd8ed1ab_0
