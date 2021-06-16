@@ -61,7 +61,7 @@ function SpeciesVizApp(props) {
   const [showCitations, setShowCitations] = useState([]);   // list of project codes
 
   const maxLevel = useMemo(() => {
-    return Math.max(1, Math.max(...Object.values(maxLevels)));
+    return Math.max(...Object.values(maxLevels));
   }, [maxLevels])
 
   const buildQueryString = (newArgs) => {
