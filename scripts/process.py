@@ -564,7 +564,7 @@ def summary_raw(gdf: geopandas.GeoDataFrame, **kwargs) -> BaseGeometry:
 def summary_convex(gdf: geopandas.GeoDataFrame, **kwargs) -> geopandas.GeoDataFrame:
     feat = buffer_union(Feature(
         smooth_polygon(gdf.unary_union.convex_hull),
-        {'level': 1}
+        {'level': 0}
     ))
     hull = geopandas.GeoDataFrame.from_features([feat])
     return hull
@@ -586,7 +586,7 @@ def summary_concave(gdf: geopandas.GeoDataFrame, **kwargs) -> geopandas.GeoDataF
             buffered_geom = hullobj.buffer_in_meters(geom, 1000)
             feat = buffer_union(Feature(
                 smooth_polygon(buffered_geom),
-                {'level': 1}
+                {'level': 0}
             ))
             return geopandas.GeoDataFrame.from_features([feat])
         except TypeError:
