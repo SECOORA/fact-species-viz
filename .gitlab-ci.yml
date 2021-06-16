@@ -4,32 +4,46 @@ stages:
   - deploy
   - cleanup
 
-build_staging:
+build_staging_backend:
   stage: build
   only:
     - master
   script:
-    - docker build -t registry.axiom/$CI_PROJECT_NAME --build-arg MAPBOX_TOKEN=$MAPBOX_TOKEN --build-arg DATA_URL=$DATA_URL .
+    - docker build -t registry.axiom/atp-server:latest -f Dockerfile.backend
 
-push_staging:
+build_staging_frontend:
+  stage: build
+  only:
+    - master
+  script:
+    - docker build -t registry.axiom/atp-frontend:latest --build-arg MAPBOX_TOKEN=$MAPBOX_TOKEN --build-arg DATA_URL=$DATA_URL .
+
+push_staging_backend:
   stage: push
   only:
     - master
   script:
-    - docker push registry.axiom/$CI_PROJECT_NAME
+    - docker push registry.axiom/atp-server:latest
 
-deploy_staging:
-  stage: deploy
-  environment:
-    name: stage
-    url: http://stage-$CI_PROJECT_NAME.srv.axds.co
-    on_stop: stop_staging
+push_staging_frontend:
+  stage: push
   only:
     - master
   script:
-    - docker run --rm registry.axiom/ansible ap apps-stage $CI_PROJECT_NAME --tags deploy
+    - docker push registry.axiom/atp-frontend:latest
 
-stop_staging:
+deploy_staging_backend:
+  stage: deploy
+  environment:
+    name: stage
+    url: http://stage-atp-server.srv.axds.co
+    on_stop: stop_staging_backend
+  only:
+    - master
+  script:
+    - docker run --rm registry.axiom/ansible ap apps-stage atp-server --tags deploy
+
+stop_staging_backend:
   stage: deploy
   only:
     - master
@@ -38,11 +52,11 @@ stop_staging:
     name: stage
     action: stop
   script:
-    - docker run --rm registry.axiom/ansible ap apps-stage $CI_PROJECT_NAME --tags deploy -e fact_species_viz_state=stopped
+    - docker run --rm registry.axiom/ansible ap apps-stage atp-server --tags deploy -e atp_server_state=stopped
 
-cleanup_staging:
+cleanup_staging_backend:
   stage: cleanup
   only:
     - master
   script:
-    - docker rmi --no-prune registry.axiom/$CI_PROJECT_NAME
+    - docker rmi --no-prune registry.axiom/atp-server:latest
