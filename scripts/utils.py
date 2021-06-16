@@ -16,5 +16,6 @@ def get_atp_cache_key(prefix, year, species_aphia_id, type, project_code='_ALL',
 
 
 class ATPType(str, Enum):
+    all = "all"
     range = "range"
     distribution = "distribution"

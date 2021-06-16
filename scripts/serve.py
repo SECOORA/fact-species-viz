@@ -21,18 +21,27 @@ app.add_middleware(
 
 @app.post('/atp/{project_code}/{type}/{year}')
 async def process_atp_project(project_code: str, year: int, type: ATPType):
-    kwargs = {
-        'project_code': project_code,
-        'year': year,
-        'type': type.value
-    }
+    if type == ATPType.all:
+        kwargs = {
+            'project_code': project_code,
+            'year': year,
+            'type': ATPType.range.value
+        }
 
-    # if month:
-    #     kwargs['month'] = month
+        res = tasks.run_atp_process.apply_async(kwargs=kwargs)
 
-    res = tasks.run_atp_process.apply_async(kwargs=kwargs)
+        kwargs = {
+            **kwargs,
+            'type': ATPType.distribution.value
+        }
+
+        res = tasks.run_atp_process.apply_async(kwargs=kwargs)
+
     # res = tasks.run_atp_process.apply(kwargs=kwargs)
     # ret_val = res.get()
+
+    if type == ATPType.all:
+        kwargs['type'] = [ATPType.range.value, ATPType.distribution.value]
 
     return {'status': 'processing', 'args': kwargs}
 

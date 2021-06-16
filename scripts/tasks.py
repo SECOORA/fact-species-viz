@@ -30,6 +30,8 @@ def run_atp_process(project_code: str, year: int, type: ATPType, month: Optional
     elif type == ATPType.distribution:
         agg_method = "animal_interpolated_paths"
         summary_method = "distribution_buffered"
+    else:
+        raise ValueError(f"Unknown type ({type}) given to run_atp_process")
 
     # kwargs = {
     #     'trackercode': project_code,
