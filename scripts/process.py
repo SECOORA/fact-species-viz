@@ -32,6 +32,8 @@ except ImportError:
     
 from .fetch import get_all_tables
 from .config import CONFIG
+from .utils import lock
+from .cache import r
 
 # transform functions
 def raw(df: pd.DataFrame) -> geopandas.GeoDataFrame:
@@ -809,7 +811,7 @@ def do_process(trackercode: str, year: str, agg_method: str, summary_method: str
 
 def process(trackercode: str, year: str, agg_method: str, summary_method: str, month: Optional[int]=None, buffer: Optional[float]=None, simplify: Optional[float]=None, jitter: Optional[float]=None, round_decimals: Optional[int]=None, force: bool=False) -> Sequence[Dict[str, Any]]:
     agg_callable: Callable[[pd.DataFrame], geopandas.GeoDataFrame] = agg_methods[agg_method]['callable']
-    file_discriminant: str = agg_methods[agg_method]['discrim']
+    agg_discrim: str = agg_methods[agg_method]['discrim']
 
     summary_callable: Callable[[geopandas.GeoDataFrame], BaseGeometry] = summary_methods[summary_method]['callable']
     summary_discrim: str = summary_methods[summary_method]['discrim']
@@ -826,23 +828,26 @@ def process(trackercode: str, year: str, agg_method: str, summary_method: str, m
         print(species_name_triple, len(sdf), file=sys.stderr)
         species_aphia_id, species_common_name, species_scientific_name = species_name_triple
 
-        cache_path = Path(CONFIG.data_dir) / Path(f"{trackercode}-{year}-{species_aphia_id}.geojson")
-        if cache_path.exists() and not force:
-            with cache_path.open() as f:
-                print(f"> reading from cache {str(cache_path)}", file=sys.stderr)
-                gdf = geopandas.read_file(f, driver="GeoJSON")
-                gdf['datecollected'] = gdf['datecollected'].apply(pd.to_datetime)
-                gdf.set_index('monthcollected', inplace=True)
-        else:
+        gdf: geopandas.GeoDataFrame
+        cache_path = Path(CONFIG.data_dir) / Path(f"{trackercode}-{year}-{species_aphia_id}-{agg_discrim}.geojson")
+        with lock(r, str(cache_path)):
+            if cache_path.exists() and not force:
+                with cache_path.open() as f:
+                    print(f"> reading from cache {str(cache_path)}", file=sys.stderr)
+                    gdf = geopandas.read_file(f, driver="GeoJSON")
+                    gdf['datecollected'] = gdf['datecollected'].apply(pd.to_datetime)
+                    gdf.set_index('monthcollected', inplace=True)
+            else:
 
-            gdf = agg_callable(sdf)
-            gdf = gdf.assign(project_code=trackercode)     # provenance for this intermediate data
+                gdf = agg_callable(sdf)
+                gdf = gdf.assign(project_code=trackercode)     # provenance for this intermediate data
 
-            # cache the aggregate output for future use (combining with same species from different projects)
-            # TODO: can this go in redis somehow
-            to_disk(gdf.reset_index(), str(cache_path))
-            print(f"> caching {str(cache_path)}", file=sys.stderr)
+                # cache the aggregate output for future use (combining with same species from different projects)
+                # TODO: can this go in redis somehow
+                to_disk(gdf.reset_index(), str(cache_path))
+                print(f"> caching {str(cache_path)}", file=sys.stderr)
 
+        assert gdf is not None
         range_low = -math.inf
         range_high = math.inf
 
@@ -951,21 +956,22 @@ def load_df(trackercode: str, year: str, trim: bool=True, jitter: Optional[float
 
     need = True
     p = Path(CONFIG.data_dir) / Path(f"{trackercode}_{year}.csv")
-    if p.exists():
-        # verify they have the species
-        try:
-            sdf = pd.read_csv(p, nrows=2, **kwargs)
-            if 'aphiaid' in sdf.columns:
-                need = False
-        except ValueError as e:
-            if not "columns expected but not found" in str(e):
-                raise
-                
-        if need:
-            print(f"load_df({trackercode},{year}): no species info, re-loading from db", file=sys.stderr)
+    with lock(r, str(p)):
+        if p.exists():
+            # verify they have the species
+            try:
+                sdf = pd.read_csv(p, nrows=2, **kwargs)
+                if 'aphiaid' in sdf.columns:
+                    need = False
+            except ValueError as e:
+                if not "columns expected but not found" in str(e):
+                    raise
 
-    if need:
-        get_all_tables(trackercode=trackercode, year=year, path=str(p))
+            if need:
+                print(f"load_df({trackercode},{year}): no species info, re-loading from db", file=sys.stderr)
+
+        if need:
+            get_all_tables(trackercode=trackercode, year=year, path=str(p))
 
     assert p.exists()
 
