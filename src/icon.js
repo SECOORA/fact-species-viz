@@ -110,3 +110,12 @@ export const IconLeft = (props) => {
 export const IconRight = (props) => {
   return <IconBase path="M9 5l7 7-7 7" {...props} />;
 }
+
+export const IconZoom = (props) => {
+  return (
+    <IconBase
+      path="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"
+      {...props}
+    />
+  )
+}

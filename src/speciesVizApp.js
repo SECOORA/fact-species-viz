@@ -5,6 +5,7 @@ import axios from "axios";
 import _ from 'lodash';
 
 import GLMap from "./glmap.js";
+import CitationModal from "./citationModal.js";
 import DataLayer from "./dataLayer.js";
 import LayerTile from "./layerTile.js";
 import LayerEditor from "./layerEditor.js";
@@ -24,28 +25,39 @@ function SpeciesVizApp(props) {
     history = useHistory();
 
   const [dataInventory, setDataInventory] = useState([]);
+  const [citations, setCitations] = useState({}); // project code -> {shortname, citation, website}
   const [maxLevels, setMaxLevels] = useState({}); // layerKey -> maximum
   const [layerData, setLayerData] = useState([
     {
       layerKey: "ooba",
       aphiaId: 159353,
-      year: 2016,
+      year: 2019,
       project: "_ALL",
-      month: 6,
+      month: 'all',
       palette: "reds_r",
-      type: "distribution"
+      type: "distribution",
     },
-    {
-      layerKey: "oajj",
-      aphiaId: 159353,
-      year: 2015,
-      project: "_ALL",
-      month: 6,
-      palette: "purples_r",
-      type: "distribution"
-    },
+    // {
+    //   layerKey: "ooba",
+    //   aphiaId: 159353,
+    //   year: 2016,
+    //   project: "_ALL",
+    //   month: 6,
+    //   palette: "reds_r",
+    //   type: "distribution"
+    // },
+    // {
+    //   layerKey: "oajj",
+    //   aphiaId: 159353,
+    //   year: 2015,
+    //   project: "_ALL",
+    //   month: 6,
+    //   palette: "purples_r",
+    //   type: "distribution"
+    // },
   ]);
   const [activeIdx, setActiveIdx] = useState(0);
+  const [showCitations, setShowCitations] = useState([]);   // list of project codes
 
   const maxLevel = useMemo(() => {
     return Math.max(...Object.values(maxLevels));
@@ -92,6 +104,14 @@ function SpeciesVizApp(props) {
       setDataInventory(response.data);
     }
     getInventory();
+  }, []);
+
+  useEffect(() => {
+    async function getCitations() {
+      const response = await axios.get(`${process.env.DATA_URL}/atp/citations`);
+      setCitations(response.data);
+    }
+    getCitations();
   }, []);
 
   const speciesLookup = useMemo(() => {
@@ -209,7 +229,7 @@ function SpeciesVizApp(props) {
   }
 
   return (
-    <div>
+    <div className="relative">
       <div className="flex">
         <GLMap
           idField="key"
@@ -283,9 +303,19 @@ function SpeciesVizApp(props) {
             notifyUpdate={onLayerUpdate}
             currentLayer={layerData[activeIdx]}
             dataInventory={dataInventory}
+            citations={citations}
+            onShowCitations={(codes) => setShowCitations(codes)}
           />
         </div>
       </div>
+
+      {showCitations.length > 0 && (
+        <CitationModal
+          citations={citations}
+          showCitations={showCitations}
+          onClose={() => setShowCitations([])}
+          />
+      )}
     </div>
   );
 }

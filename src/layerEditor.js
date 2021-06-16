@@ -4,7 +4,7 @@ import _ from 'lodash';
 
 import Chooser from "./chooser.js";
 import Palettes from "./palettes.js";
-import {IconLeft, IconRight} from "./icon.js";
+import {IconLeft, IconRight, IconZoom} from "./icon.js";
 import classNames from "classnames";
 
 const LayerEditor = (props) => {
@@ -245,6 +245,34 @@ const LayerEditor = (props) => {
             }
           />
         </div>
+      </div>
+
+      <hr className="my-2" />
+
+      <div>
+        <div className="text-sm mb-1 flex">
+          Citations
+          <IconZoom
+            onClick={() => props.onShowCitations(speciesProjects.slice(1))}
+            size={4}
+            extraClasses="flex-shrink"
+          />
+        </div>
+
+        {speciesProjects.slice(1).map(sp => {
+          return (
+            <div key={`cite-${sp}`} className="text-xs mb-1">
+              <div className="font-bold truncate">{props.citations[sp]?.shortname}</div>
+              <div className="truncate">{props.citations[sp]?.citation}</div>
+              {props.citations[sp]?.website && (
+                <a href={props.citations[sp]?.website} target="_blank">
+                  {props.citations[sp]?.website}
+                </a>
+              )}
+            </div>
+          );
+        })}
+
       </div>
     </div>
   );
