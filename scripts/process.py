@@ -826,11 +826,10 @@ def process(trackercode: str, year: str, agg_method: str, summary_method: str, m
         print(species_name_triple, len(sdf), file=sys.stderr)
         species_aphia_id, species_common_name, species_scientific_name = species_name_triple
 
-        cachename = f"cache/{trackercode}-{year}-{species_aphia_id}.geojson"
-        cache_path = Path(cachename)
+        cache_path = Path(CONFIG.data_dir) / Path(f"{trackercode}-{year}-{species_aphia_id}.geojson")
         if cache_path.exists() and not force:
             with cache_path.open() as f:
-                print(f"> reading from cache {cachename}", file=sys.stderr)
+                print(f"> reading from cache {str(cache_path)}", file=sys.stderr)
                 gdf = geopandas.read_file(f, driver="GeoJSON")
                 gdf['datecollected'] = gdf['datecollected'].apply(pd.to_datetime)
                 gdf.set_index('monthcollected', inplace=True)
@@ -841,8 +840,8 @@ def process(trackercode: str, year: str, agg_method: str, summary_method: str, m
 
             # cache the aggregate output for future use (combining with same species from different projects)
             # TODO: can this go in redis somehow
-            to_disk(gdf.reset_index(), cachename)
-            print(f"> caching {cachename}", file=sys.stderr)
+            to_disk(gdf.reset_index(), str(cache_path))
+            print(f"> caching {str(cache_path)}", file=sys.stderr)
 
         range_low = -math.inf
         range_high = math.inf
