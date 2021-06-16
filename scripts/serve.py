@@ -54,13 +54,17 @@ async def process_atp_project(project_code: str, year: int, type: ATPType):
 
 
 @app.post('/atp/PROCESS_DEFAULT')
-async def process_defaults():
+async def process_defaults(limit: Optional[str] = None):
     projects = [
         'BLKTP',
         'FSUGG',
         'FLKEYST',
         'TQCS'
     ]
+
+    if limit is not None:
+        lprojects = limit.split(",")
+        projects = [p for p in projects if p in lprojects]
 
     years = list(range(2009, 2021))
 
