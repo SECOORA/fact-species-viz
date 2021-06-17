@@ -860,7 +860,7 @@ def process(trackercode: str, year: str, agg_method: str, summary_method: str, m
         has_multiple = False
 
         # load other agg cached datasets of the same species
-        agg_data = load_agg_cache(year, species_aphia_id, skip=trackercode)
+        agg_data = load_agg_cache(year, species_aphia_id, agg_discrim, skip=trackercode)
         if agg_data:
             all_agg = pd.concat(agg_data.values()).set_index(['monthcollected'])
             agg_gdf = pd.concat([gdf, all_agg])
@@ -1029,7 +1029,7 @@ def to_disk(geoobj, fname: str, **kwargs):
 
 #agg_data = load_agg_cache(year, species_aphia_id, skip=trackercode)
 
-def load_agg_cache(year: str, species_aphia_id: str, skip: str=None) -> Dict[str, geopandas.GeoDataFrame]:
+def load_agg_cache(year: str, species_aphia_id: str, agg_discrim: str, skip: str=None) -> Dict[str, geopandas.GeoDataFrame]:
     """
     Loads all matching year/aphia_id aggregate caches from disk.
     Returns a dict of project code -> geodataframe.
@@ -1037,8 +1037,8 @@ def load_agg_cache(year: str, species_aphia_id: str, skip: str=None) -> Dict[str
     ret: Dict[str, geopandas.GeoDataFrame] = {}
 
     p = Path(CONFIG.data_dir)
-    for pp in p.glob(f'*-{year}-{species_aphia_id}.geojson'):
-        pproject, pyear, paphia = pp.stem.split('-')
+    for pp in p.glob(f'*-{year}-{species_aphia_id}-{agg_discrim}.geojson'):
+        pproject, pyear, paphia, _ = pp.stem.split('-')
         if pproject == skip:
             continue
 
