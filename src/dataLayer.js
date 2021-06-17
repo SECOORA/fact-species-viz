@@ -47,7 +47,10 @@ const useDistribution = (
     return start;
   }, [aphiaId, year, type, month, project]);
 
-  const { data, error } = useSWR(url, fetcher);
+  const { data, error } = useSWR(url, fetcher, {
+    revalidateOnFocus: false,
+    errorRetryCount: 1,
+  });
 
   return {
     data: data,
