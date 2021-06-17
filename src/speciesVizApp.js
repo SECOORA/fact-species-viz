@@ -270,7 +270,7 @@ function SpeciesVizApp(props) {
           mapWidth={700}
           maxZoom={4}
           overlayComponents={
-            <div className="mt-2 ml-2">
+            <div className="absolute bottom-0 right-0 mb-8 mr-4">
               <Legend
                 maxLevel={maxLevel}
                 palettes={layerData.map((ld) => ld.palette)}
