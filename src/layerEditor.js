@@ -152,6 +152,28 @@ const LayerEditor = (props) => {
     });
   }
 
+  const enablePrevYear = useMemo(() => {
+    const idx = availYears.indexOf(props.currentLayer.year);
+    return idx > 0;
+  }, [availYears, props.currentLayer.year]);
+
+  const enableNextYear = useMemo(() => {
+    const idx = availYears.indexOf(props.currentLayer.year);
+    return idx !== -1 && idx < availYears.length - 1;
+  }, [availYears, props.currentLayer.year]);
+
+  const enablePrevMonth = useMemo(() => {
+    if (props.currentLayer.month === 'all') { return false; }
+    const idx = availMonths.indexOf(props.currentLayer.month);
+    return idx > 0;
+  }, [availMonths, props.currentLayer.month]);
+
+  const enableNextMonth = useMemo(() => {
+    if (props.currentLayer.month === 'all') { return false; }
+    const idx = availMonths.indexOf(props.currentLayer.month);
+    return idx !== -1 && idx < availMonths.length - 1;
+  }, [availMonths, props.currentLayer.month]);
+
 	return (
     <div className="w-64 bg-gray-300 p-2 h-full border-l border-gray-600">
       <Chooser
@@ -179,8 +201,8 @@ const LayerEditor = (props) => {
         onClick={(v) => _updateLayer({ year: v })}
         curVal={props.currentLayer.year}
         label="Year"
-        before={<IconLeft size={4} onClick={() => changeYear(-1)} />}
-        after={<IconRight size={4} onClick={() => changeYear(1)} />}
+        before={<IconLeft size={4} onClick={() => changeYear(-1)} enabled={enablePrevYear} />}
+        after={<IconRight size={4} onClick={() => changeYear(1)} enabled={enableNextYear} />}
       />
 
       <Chooser
@@ -192,9 +214,9 @@ const LayerEditor = (props) => {
         curVal={props.currentLayer.month}
         label="Month"
         before={
-          <IconLeft size={4} onClick={() => changeMonth(-1)} extraClasses="" />
+          <IconLeft size={4} onClick={() => changeMonth(-1)} extraClasses="" enabled={enablePrevMonth} />
         }
-        after={<IconRight size={4} onClick={() => changeMonth(1)} />}
+        after={<IconRight size={4} onClick={() => changeMonth(1)} enabled={enableNextMonth} />}
       />
 
       <div className="flex mx-2 my-4">
