@@ -575,6 +575,7 @@ def summary_convex(gdf: geopandas.GeoDataFrame, **kwargs) -> geopandas.GeoDataFr
     return hull
 
 def summary_concave(gdf: geopandas.GeoDataFrame, **kwargs) -> geopandas.GeoDataFrame:
+    print("Calculating concave hull", file=sys.stderr)
     month_df_points = np.unique(np.stack(
         (
             gdf['longitude'].to_numpy(),
@@ -865,10 +866,14 @@ def process(trackercode: str, year: str, agg_method: str, summary_method: str, m
             all_agg = pd.concat(agg_data.values()).set_index(['monthcollected'])
             agg_gdf = pd.concat([gdf, all_agg])
 
+            print(f"Found {len(agg_data)} other cached data for {species_aphia_id}/{year}, projects: {','.join(agg_data.keys())}", file=sys.stderr)
+
             frames_and_metadata.append(
                 (agg_gdf, [trackercode, *agg_data.keys()])
             )
             has_multiple = True
+        else:
+            print(f"No other cached data for {species_aphia_id}/{year}", file=sys.stderr)
 
         for cur_df, cur_metadata in frames_and_metadata:
             # for each month:
