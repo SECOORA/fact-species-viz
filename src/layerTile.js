@@ -28,20 +28,25 @@ const LayerTile = (props) => {
 
   return (
     <div
-      className={classNames("w-64 mt-1 rounded-sm", {
+      className={classNames("w-64 mt-1 rounded-sm rounded-r-none", {
         "bg-gray-300 border-l border-t border-b border-gray-600":
           props.isActive,
         "bg-white border-l border-t border-b border-white shadow":
           !props.isActive,
       })}
     >
-      <div className="flex flex-col">
-        <div className="flex items-center px-2 py-2">
+      <div className="flex flex-col relative">
+        {props.isActive && (
+          <div className="h-full w-2 bg-gray-300 absolute top-0" style={{right: "-2px"}}></div>
+        )}
+        <div
+          className="flex items-center px-2 py-2 cursor-pointer"
+          onClick={(e) => props.onClick()}
+        >
           <PaletteSwatch
             palette={props.palette}
-            extraClasses={"flex-initial shadow cursor-pointer"}
+            extraClasses={"flex-initial shadow"}
             size={8}
-            onClick={(e) => props.onClick()}
           />
           <div className="flex flex-col text-sm px-3 flex-grow">
             <div className="text-gray-700 font-bold capitalize">
