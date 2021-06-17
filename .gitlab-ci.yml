@@ -18,6 +18,22 @@ build_staging_frontend:
   script:
     - docker build -t registry.axiom/atp-site:latest --build-arg MAPBOX_TOKEN=$MAPBOX_TOKEN --build-arg DATA_URL=https://stage-atp-server.srv.axds.co .
 
+build_production_backend:
+  stage: build
+  only:
+    - tags
+  script:
+    - docker build -t registry.axiom/atp-server:$CI_COMMIT_REF_NAME -f Dockerfile.backend .
+    - docker tag registry.axiom/atp-server:$CI_COMMIT_REF_NAME registry.axiom/atp-server:prod
+
+build_production_frontend:
+  stage: build
+  only:
+    - tags
+  script:
+    - docker build -t registry.axiom/atp-site:$CI_COMMIT_REF_NAME --build-arg MAPBOX_TOKEN=$MAPBOX_TOKEN --build-arg DATA_URL=https://atp-server.srv.axds.co .
+    - docker tag registry.axiom/atp-site:$CI_COMMIT_REF_NAME registry.axiom/atp-site:prod
+
 push_staging_backend:
   stage: push
   only:
@@ -31,6 +47,22 @@ push_staging_frontend:
     - master
   script:
     - docker push registry.axiom/atp-site:latest
+
+push_production_backend:
+  stage: push
+  only:
+    - tags
+  script:
+    - docker push registry.axiom/atp-server:$CI_COMMIT_REF_NAME
+    - docker push registry.axiom/atp-server:prod
+
+push_production_frontend:
+  stage: push
+  only:
+    - tags
+  script:
+    - docker push registry.axiom/atp-site:$CI_COMMIT_REF_NAME
+    - docker push registry.axiom/atp-site:prod
 
 deploy_staging_backend:
   stage: deploy
@@ -55,6 +87,28 @@ deploy_staging_frontend:
   script:
     - docker pull registry.axiom/ansible
     - docker run --rm registry.axiom/ansible ap apps-stage atp-site --tags deploy
+
+deploy_production_backend:
+  stage: deploy
+  environment:
+    name: prod
+    url: http://atp-server.srv.axds.co
+  only:
+    - tags
+  script:
+    - docker pull registry.axiom/ansible
+    - docker run --rm registry.axiom/ansible ap apps-prod atp-server -e atp_server_version=$CI_COMMIT_REF_NAME --tags deploy
+
+deploy_production_frontend:
+  stage: deploy
+  environment:
+    name: prod-frontend
+    url: http://atp-site.srv.axds.co
+  only:
+    - tags
+  script:
+    - docker pull registry.axiom/ansible
+    - docker run --rm registry.axiom/ansible ap apps-prod atp-site -e atp_site_version=$CI_COMMIT_REF_NAME --tags deploy
 
 stop_staging_backend:
   stage: deploy
@@ -93,3 +147,19 @@ cleanup_staging_frontend:
     - master
   script:
     - docker rmi --no-prune registry.axiom/atp-site:latest
+
+cleanup_production_backend:
+  stage: cleanup
+  only:
+    - tags
+  script:
+    - docker rmi --no-prune registry.axiom/atp-server:$CI_COMMIT_REF_NAME
+    - docker rmi --no-prune registry.axiom/atp-server:prod
+
+cleanup_production_frontend:
+  stage: cleanup
+  only:
+    - tags
+  script:
+    - docker rmi --no-prune registry.axiom/atp-site:$CI_COMMIT_REF_NAME
+    - docker rmi --no-prune registry.axiom/atp-site:prod
