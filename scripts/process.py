@@ -564,8 +564,11 @@ def summary_raw(gdf: geopandas.GeoDataFrame, **kwargs) -> BaseGeometry:
     return geopandas.GeoSeries([gdf.unary_union])
 
 def summary_convex(gdf: geopandas.GeoDataFrame, **kwargs) -> geopandas.GeoDataFrame:
+    convex_hull = gdf.unary_union.convex_hull
+    if not isinstance(convex_hull, Point):
+        convex_hull = smooth_polygon(convex_hull)
     feat = buffer_union(Feature(
-        smooth_polygon(gdf.unary_union.convex_hull),
+        convex_hull,
         {'level': 1}
     ))
     hull = geopandas.GeoDataFrame.from_features([feat])
