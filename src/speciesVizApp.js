@@ -13,6 +13,9 @@ import Legend from "./legend.js";
 import Palettes from "./palettes.js";
 import {IconPlus} from "./icon.js";
 
+import imgFactLogo from './assets/img/fact_logo.jpg';
+
+
 const getRandomItem = (iterable) => iterable[Math.floor(Math.random() * iterable.length)]
 
 const useQuery = () => {
@@ -28,6 +31,7 @@ function SpeciesVizApp(props) {
   const [dataInventory, setDataInventory] = useState([]);
   const [citations, setCitations] = useState({}); // project code -> {shortname, citation, website}
   const [maxLevels, setMaxLevels] = useState({}); // layerKey -> maximum
+  const [shownProjects, setShownProjects] = useState({}); // layerKey -> [project codes]
   const [layerData, setLayerData] = useState([
     {
       layerKey: "ooba",
@@ -59,10 +63,15 @@ function SpeciesVizApp(props) {
   ]);
   const [activeIdx, setActiveIdx] = useState(0);
   const [showCitations, setShowCitations] = useState([]);   // list of project codes
+  const [readOnly, setReadOnly] = useState(false);      // removes interactive UI
 
   const maxLevel = useMemo(() => {
     return Math.max(...Object.values(maxLevels));
-  }, [maxLevels])
+  }, [maxLevels]);
+
+  const shownProjectCodes = useMemo(() => {
+    return _.uniq(_.flatMap(Object.values(shownProjects)));
+  }, [shownProjects]);
 
   const buildQueryString = (newArgs) => {
     let {newMonth = month, newYear = year, newAphiaId = aphiaId} = newArgs;
@@ -172,6 +181,15 @@ function SpeciesVizApp(props) {
     });
   }
 
+  const updateShownProjects = (projectCodes, layerKey) => {
+    setShownProjects(curShownProjects => {
+      return {
+        ...curShownProjects,
+        [layerKey]: projectCodes
+      }
+    })
+  }
+
   /**
    * Moves the layer indicated by index in the direction given.
    * Won't do anything if that moves the layer out of bounds.
@@ -224,6 +242,11 @@ function SpeciesVizApp(props) {
       return _.omit(curMaxLevels, layerData[idx].layerKey);
     });
 
+    // also remove the shown project codes
+    setShownProjects(curProjects => {
+      return _.omit(curProjects, layerData[idx].layerKey);
+    })
+
     setLayerData(ld => {
       const copy = [...ld];
       copy.splice(idx, 1);
@@ -268,6 +291,7 @@ function SpeciesVizApp(props) {
                 layerKey={ld.layerKey}
                 opacity={ld.opacity}
                 updateLegendLevel={updateLegendLevel}
+                updateShownProjects={updateShownProjects}
                 maxLevel={maxLevel}
                 type={ld.type}
               />
@@ -279,44 +303,76 @@ function SpeciesVizApp(props) {
             className="tileholder flex flex-col absolute"
             style={{ left: "-16rem" }}
           >
-            <div className="w-16 h-16 bg-indigo-700 self-end text-4xl cursor-pointer text-white flex justify-center">
-              <IconPlus
-                extraClasses="flex-grow hover:text-indigo-200"
-                size="full"
-                onClick={() => {
-                  addLayer();
-                }}
-              />
-            </div>
-
-            {layerData.map((ld, idx) => {
-              return (
-                <LayerTile
-                  key={`lt-${idx}`}
-                  onClick={() => setActiveIdx(idx)}
-                  isActive={idx === activeIdx}
-                  {...ld}
-                  speciesName={speciesLookup[ld.aphiaId]?.commonName}
-                  onLayerUp={() => moveLayer(idx, -1)}
-                  onLayerDown={() => moveLayer(idx, 1)}
-                  enableLayerUp={idx > 0}
-                  enableLayerDown={idx < layerData.length - 1}
-                  onLayerDelete={() => deleteLayer(idx)}
-                  enableDelete={layerData.length > 1}
-                  onLayerDuplicate={() => addLayer(idx, false)}
-                  enableDuplicate={layerData.length < 5}
+            {!readOnly && (
+              <div className="w-16 h-16 bg-indigo-700 self-end text-4xl cursor-pointer text-white flex justify-center">
+                <IconPlus
+                  extraClasses="flex-grow hover:text-indigo-200"
+                  size="full"
+                  onClick={() => {
+                    addLayer();
+                  }}
                 />
-              );
-            })}
-          </div>
+              </div>
+            )}
 
-          <LayerEditor
-            notifyUpdate={onLayerUpdate}
-            currentLayer={layerData[activeIdx]}
-            dataInventory={dataInventory}
-            citations={citations}
-            onShowCitations={(codes) => setShowCitations(codes)}
-          />
+            {!readOnly &&
+              layerData.map((ld, idx) => {
+                return (
+                  <LayerTile
+                    key={`lt-${idx}`}
+                    onClick={() => setActiveIdx(idx)}
+                    isActive={idx === activeIdx}
+                    {...ld}
+                    speciesName={speciesLookup[ld.aphiaId]?.commonName}
+                    onLayerUp={() => moveLayer(idx, -1)}
+                    onLayerDown={() => moveLayer(idx, 1)}
+                    enableLayerUp={idx > 0}
+                    enableLayerDown={idx < layerData.length - 1}
+                    onLayerDelete={() => deleteLayer(idx)}
+                    enableDelete={layerData.length > 1}
+                    onLayerDuplicate={() => addLayer(idx, false)}
+                    enableDuplicate={layerData.length < 5}
+                  />
+                );
+              })}
+          </div>
+          <div>
+            {!readOnly && (
+              <LayerEditor
+                notifyUpdate={onLayerUpdate}
+                currentLayer={layerData[activeIdx]}
+                dataInventory={dataInventory}
+                citations={citations}
+                onShowCitations={(codes) => setShowCitations(codes)}
+              />
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-gray-300 border-b border-gray-600 text-sm py-2 px-2 relative">
+        <div className="flex">
+          <img className="w-16 absolute bottom-0 mb-2 border border-gray-300 rounded-md shadow cursor-pointer" src={imgFactLogo} alt="FACT Logo" onClick={() => setReadOnly(!readOnly)}/>
+          <div className="ml-16 mr-4">
+            <span className="ml-2 font-bold">FACT DaViT</span> &middot; <a href="https://secoora.org/fact/" target="_blank">https://secoora.org/fact/</a>
+          </div>
+          {shownProjectCodes.length > 0 && (
+            <div
+              className="inline cursor-pointer"
+              onClick={() => setShowCitations(shownProjectCodes)}
+            >
+              <div className="inline font-bold">Data Shown: </div>
+              {shownProjectCodes.map((pc, i) => {
+                return (
+                  <span key={i}>
+                    {!!i && ", "}
+                    {pc}
+                  </span>
+                );
+              })}
+            </div>
+          )}
+          &nbsp;
         </div>
       </div>
 

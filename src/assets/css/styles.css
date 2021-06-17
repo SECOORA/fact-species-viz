@@ -11,3 +11,7 @@
 .has-tooltip:hover .tooltip {
   @apply visible z-50
 }
+
+.mapboxgl-ctrl-bottom-left .mapboxgl-ctrl {
+  margin-bottom: 45px;
+}

@@ -66,6 +66,7 @@ const DataLayer = ({
   opacity = 50,
   layerKey,
   updateLegendLevel,
+  updateShownProjects,
   maxLevel = 10,
   type = 'distribution'
 }) => {
@@ -81,12 +82,26 @@ const DataLayer = ({
     return getStyle(palette, opacity, maxLevel);
   }, [palette, opacity, maxLevel]);
 
+  // notify application of current max level for this data layer
   useEffect(() => {
     if (!data || !updateLegendLevel) {
       return;
     }
     const maxLevel = Math.max(...data.features.map(f => f.properties.level));
     updateLegendLevel(maxLevel, layerKey);
+  }, [data]);
+
+  // notify application of all projects currently being displayed on this data layer
+  useEffect(() => {
+    if (!data || !updateShownProjects) {
+      return;
+    }
+    if (data.features.length < 1) {
+      return;
+    }
+
+    const projectCodes = data.features[0].properties.project_codes.split(",").map(p => p.trim());
+    updateShownProjects(projectCodes, layerKey);
   }, [data]);
 
   if (!isLoading && !isError) {
