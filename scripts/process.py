@@ -1036,7 +1036,7 @@ def load_agg_cache(year: str, species_aphia_id: str, skip: str=None) -> Dict[str
     """
     ret: Dict[str, geopandas.GeoDataFrame] = {}
 
-    p = Path("cache")
+    p = Path(CONFIG.data_dir)
     for pp in p.glob(f'*-{year}-{species_aphia_id}.geojson'):
         pproject, pyear, paphia = pp.stem.split('-')
         if pproject == skip:
