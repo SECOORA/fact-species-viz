@@ -303,18 +303,6 @@ function SpeciesVizApp(props) {
             className="tileholder flex flex-col absolute"
             style={{ left: "-16rem" }}
           >
-            {!readOnly && (
-              <div className="w-16 h-16 bg-indigo-700 self-end text-4xl cursor-pointer text-white flex justify-center">
-                <IconPlus
-                  extraClasses="flex-grow hover:text-indigo-200"
-                  size="full"
-                  onClick={() => {
-                    addLayer();
-                  }}
-                />
-              </div>
-            )}
-
             {!readOnly &&
               layerData.map((ld, idx) => {
                 return (
@@ -330,7 +318,7 @@ function SpeciesVizApp(props) {
                     enableLayerDown={idx < layerData.length - 1}
                     onLayerDelete={() => deleteLayer(idx)}
                     enableDelete={layerData.length > 1}
-                    onLayerDuplicate={() => addLayer(idx, false)}
+                    onLayerDuplicate={() => addLayer(idx, true)}
                     enableDuplicate={layerData.length < 5}
                   />
                 );
