@@ -5,7 +5,7 @@ import PaletteSwatch from "./paletteSwatch";
 
 const Legend = (props) => {
 	return (
-    <div className="inline-flex text-sm items-center bg-gray-200 border border-gray-300 shadow px-2 rounded-md">
+    <div className="inline-flex text-sm items-center bg-white border border-gray-300 shadow px-2 rounded-md">
       <div>0</div>
       <div className="flex flex-col border border-gray-400 mx-1">
         {props.palettes?.map((p, idx) => {
