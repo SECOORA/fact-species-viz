@@ -39,27 +39,9 @@ function SpeciesVizApp(props) {
       year: 2019,
       project: "_ALL",
       month: 'all',
-      palette: "reds_r",
+      palette: "oranges_r",
       type: "distribution",
     },
-    // {
-    //   layerKey: "ooba",
-    //   aphiaId: 159353,
-    //   year: 2016,
-    //   project: "_ALL",
-    //   month: 6,
-    //   palette: "reds_r",
-    //   type: "distribution"
-    // },
-    // {
-    //   layerKey: "oajj",
-    //   aphiaId: 159353,
-    //   year: 2015,
-    //   project: "_ALL",
-    //   month: 6,
-    //   palette: "purples_r",
-    //   type: "distribution"
-    // },
   ]);
   const [activeIdx, setActiveIdx] = useState(0);
   const [showCitations, setShowCitations] = useState([]);   // list of project codes
