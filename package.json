@@ -34,7 +34,8 @@
   },
   "scripts": {
     "start": "parcel static/index.html",
-    "build": "parcel build -d dist --public-url './' static/index.html"
+    "build": "parcel build -d dist --public-url './' static/index.html",
+    "build-prod": "parcel build -d dist/prod static/content.html && parcel build -d dist/prod static/footer.html"
   },
   "devDependencies": {
     "@babel/core": "^7.7.7",

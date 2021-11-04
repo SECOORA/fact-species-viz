@@ -29,10 +29,29 @@ build_production_backend:
 build_production_frontend:
   stage: build
   only:
-    - tags
+    refs:
+      - tags
+      - testpipe
+    changes:
+      - static/*
+      - src/*
+      - src/**/*
+      - package.json
+      - yarn.lock
+      - .babelrc
+      - .postcssrc
+      - tailwind.config.js
+  variables:
+    MAPBOX_TOKEN: '$MAPBOX_TOKEN'
+    DATA_URL: '$DATA_URL'
+  image: node:12
   script:
-    - docker build -t registry.axiom/atp-site:$CI_COMMIT_REF_NAME --build-arg MAPBOX_TOKEN=$MAPBOX_TOKEN --build-arg DATA_URL=https://atp-server.srv.axds.co .
-    - docker tag registry.axiom/atp-site:$CI_COMMIT_REF_NAME registry.axiom/atp-site:prod
+    - yarn install --production=false
+    - yarn run build-prod
+  artifacts:
+    paths:
+      - dist/prod/content.html
+      - dist/prod/footer.html
 
 push_staging_backend:
   stage: push
@@ -55,14 +74,6 @@ push_production_backend:
   script:
     - docker push registry.axiom/atp-server:$CI_COMMIT_REF_NAME
     - docker push registry.axiom/atp-server:prod
-
-push_production_frontend:
-  stage: push
-  only:
-    - tags
-  script:
-    - docker push registry.axiom/atp-site:$CI_COMMIT_REF_NAME
-    - docker push registry.axiom/atp-site:prod
 
 deploy_staging_backend:
   stage: deploy
@@ -101,11 +112,21 @@ deploy_production_backend:
 
 deploy_production_frontend:
   stage: deploy
+  only:
+    refs:
+      - tags
+    changes:
+      - static/*
+      - src/*
+      - src/**/*
+      - package.json
+      - yarn.lock
+      - .babelrc
+      - .postcssrc
+      - tailwind.config.js
   environment:
     name: prod-frontend
-    url: http://atp-site.srv.axds.co
-  only:
-    - tags
+    url: https://secoora.org/fact/data-visualization-tool/
   script:
     - docker pull registry.axiom/ansible
     - docker run --rm registry.axiom/ansible ap apps-prod atp-site -e atp_site_version=$CI_COMMIT_REF_NAME --tags deploy
@@ -155,11 +176,3 @@ cleanup_production_backend:
   script:
     - docker rmi --no-prune registry.axiom/atp-server:$CI_COMMIT_REF_NAME
     - docker rmi --no-prune registry.axiom/atp-server:prod
-
-cleanup_production_frontend:
-  stage: cleanup
-  only:
-    - tags
-  script:
-    - docker rmi --no-prune registry.axiom/atp-site:$CI_COMMIT_REF_NAME
-    - docker rmi --no-prune registry.axiom/atp-site:prod
