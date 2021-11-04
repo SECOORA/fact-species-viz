@@ -41,12 +41,15 @@ build_production_frontend:
       - .babelrc
       - .postcssrc
       - tailwind.config.js
+      - .gitlab-ci.yml
   variables:
     MAPBOX_TOKEN: '$MAPBOX_TOKEN'
-    DATA_URL: '$DATA_URL'
+    DATA_URL: 'https://atp-server.srv.axds.co'
   image: node:12
   script:
     - yarn install --production=false
+    - export DATA_URL='https://atp-server.srv.axds.co'
+    - env
     - yarn run build-prod
   artifacts:
     paths:
@@ -115,6 +118,7 @@ deploy_production_frontend:
   only:
     refs:
       - tags
+      - testpipe
     changes:
       - static/*
       - src/*
@@ -124,12 +128,13 @@ deploy_production_frontend:
       - .babelrc
       - .postcssrc
       - tailwind.config.js
+      - .gitlab-ci.yml
   environment:
     name: prod-frontend
     url: https://secoora.org/fact/data-visualization-tool/
+  image: registry.axiom/ansible
   script:
-    - docker pull registry.axiom/ansible
-    - docker run --rm registry.axiom/ansible ap apps-prod atp-site -e atp_site_version=$CI_COMMIT_REF_NAME --tags deploy
+    - ap external atp-site-prod -e atp_site_local_artifact_path=/builds/axiom/fact-species-viz/dist/prod --tags deploy
 
 stop_staging_backend:
   stage: deploy
