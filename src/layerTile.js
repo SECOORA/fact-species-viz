@@ -19,7 +19,7 @@ const LayerTile = (props) => {
 
   const typeLabel = useMemo(() => {
     if (props.type.toLowerCase() === "distribution") {
-      return "dist";
+      return "distr";
     } else if (props.type.toLowerCase() === "range") {
       return "range";
     }
@@ -64,7 +64,7 @@ const LayerTile = (props) => {
           </div>
 
           <div className="flex-initial text-right">
-            <span className="m-1 bg-gray-200 rounded-full px-2 text-xs leading-loose uppercase">
+            <span className="m-1 bg-gray-200 rounded-full px-2 text-xs leading-loose capitalize">
               {typeLabel}
             </span>
           </div>
