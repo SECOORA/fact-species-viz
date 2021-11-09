@@ -242,7 +242,7 @@ function SpeciesVizApp(props) {
   }
 
   return (
-    <div className="relative">
+    <div className="relative text-base">
       <div className="flex">
         <GLMap
           idField="key"
