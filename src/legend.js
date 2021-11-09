@@ -21,7 +21,7 @@ const Legend = (props) => {
           );
         })}
       </div>
-      <div>{props.maxLevel}</div>
+      <div>{props.maxLevel} Animals Detected</div>
     </div>
   );
 
