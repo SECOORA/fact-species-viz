@@ -105,6 +105,10 @@ const LayerEditor = (props) => {
     return yearData?.months;
   }, [props.dataInventory, props.currentLayer.aphiaId, props.currentLayer.year, props.currentLayer.project]);
 
+  const shownPalettes = useMemo(() => {
+    return _.omitBy(Palettes, (v, k) => k.endsWith('_r'));
+  }, []);
+
   const changeYear = (direction = 1) => {
     const invItem = _.find(props.dataInventory, (v) => v.aphiaId === props.currentLayer.aphiaId),
       projectData = invItem.byProject[props.currentLayer.project],
@@ -174,6 +178,40 @@ const LayerEditor = (props) => {
     return idx !== -1 && idx < availMonths.length - 1;
   }, [availMonths, props.currentLayer.month]);
 
+  const invertPalette = () => {
+    const curPalette = props.currentLayer.palette;
+    let newPalette = curPalette;
+    if (curPalette.endsWith('_r')) {
+      newPalette = curPalette.substring(0, curPalette.length - 2);  // chop off '_r'
+    } else {
+      newPalette = curPalette + '_r';
+    }
+
+    // now check if it's a real palette
+    if (newPalette in Palettes) {
+      _updateLayer({palette: newPalette})
+    }
+  }
+
+  const displayPaletteName = useMemo(() => {
+    const curPalette = props.currentLayer.palette;
+    if (curPalette.endsWith('_r')) {
+      return curPalette.substring(0, curPalette.length - 2);  // chop off '_r'
+    }
+    return curPalette;
+  }, [props.currentLayer.palette])
+
+  const canInvertPalette = useMemo(() => {
+    const curPalette = props.currentLayer.palette;
+    let newPalette = curPalette;
+    if (curPalette.endsWith('_r')) {
+      newPalette = curPalette.substring(0, curPalette.length - 2);  // chop off '_r'
+    } else {
+      newPalette = curPalette + '_r';
+    }
+    return newPalette in Palettes;
+  }, [props.currentLayer.palette])
+
 	return (
     <div className="w-64 bg-gray-300 p-2 h-full border-l border-gray-600">
       <Chooser
@@ -201,8 +239,20 @@ const LayerEditor = (props) => {
         onClick={(v) => _updateLayer({ year: v })}
         curVal={props.currentLayer.year}
         label="Year"
-        before={<IconLeft size={4} onClick={() => changeYear(-1)} enabled={enablePrevYear} />}
-        after={<IconRight size={4} onClick={() => changeYear(1)} enabled={enableNextYear} />}
+        before={
+          <IconLeft
+            size={4}
+            onClick={() => changeYear(-1)}
+            enabled={enablePrevYear}
+          />
+        }
+        after={
+          <IconRight
+            size={4}
+            onClick={() => changeYear(1)}
+            enabled={enableNextYear}
+          />
+        }
       />
 
       <Chooser
@@ -214,9 +264,20 @@ const LayerEditor = (props) => {
         curVal={props.currentLayer.month}
         label="Month"
         before={
-          <IconLeft size={4} onClick={() => changeMonth(-1)} extraClasses="" enabled={enablePrevMonth} />
+          <IconLeft
+            size={4}
+            onClick={() => changeMonth(-1)}
+            extraClasses=""
+            enabled={enablePrevMonth}
+          />
         }
-        after={<IconRight size={4} onClick={() => changeMonth(1)} enabled={enableNextMonth} />}
+        after={
+          <IconRight
+            size={4}
+            onClick={() => changeMonth(1)}
+            enabled={enableNextMonth}
+          />
+        }
       />
 
       <div className="flex mx-2 my-4">
@@ -253,26 +314,74 @@ const LayerEditor = (props) => {
       <hr className="my-2" />
 
       <div className="mb-2">
-        <div className="text-sm mb-1">Palette</div>
-        <div className="flex flex-wrap justify-around">
-          {Object.keys(Palettes).map((p) => {
-            return (
-              <div key={`pal-${p}`} className={classNames("p-1 rounded-md", {"bg-gray-400 shadow": p === props.currentLayer.palette})}>
+        <div className="text-sm mb-1">Appearance</div>
+
+        <div className="relative">
+          <div className="">
+            <div className="dropdown group relative">
+              <div className="inline-block p-1 rounded-t group-hover:bg-gray-100">
                 <PaletteSwatch
-                  palette={p}
+                  palette={props.currentLayer.palette}
                   size={7}
-                  // rounded={false}
-                  onClick={() => _updateLayer({ palette: p })}
-                  extraClasses={classNames("cursor-pointer", {
-                    "shadow-lg border-gray-700 border-2":
-                      p === props.currentLayer.palette,
-                    "shadow border border-gray-400":
-                      p !== props.currentLayer.palette,
-                  })}
+                  extraClasses={classNames(
+                    "cursor-pointer shadow border-gray-700 border-2"
+                  )}
                 />
               </div>
-            );
-          })}
+
+              <div className="hidden group-hover:block absolute w-full bg-gray-100 z-50 p-1 shadow rounded-bl rounded-br rounded-tr">
+                <div className="flex justify-around">
+                  {Object.keys(shownPalettes).map((p) => {
+                    return (
+                      <div
+                        key={`pal-${p}`}
+                        className={classNames("p-1 rounded-md", {
+                          "bg-gray-400 shadow": p === displayPaletteName,
+                        })}
+                      >
+                        <PaletteSwatch
+                          palette={p}
+                          size={6}
+                          // rounded={false}
+                          onClick={() => _updateLayer({ palette: p })}
+                          extraClasses={classNames("cursor-pointer", {
+                            "shadow-lg border-gray-700 border-2":
+                              p === displayPaletteName,
+                            "shadow border border-gray-400":
+                              p !== displayPaletteName,
+                          })}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            <div className="absolute right-0 h-full top-0">
+              <label
+                className={classNames("inline-flex items-center", {
+                  "cursor-pointer": canInvertPalette,
+                  "cursor-not-allowed": !canInvertPalette,
+                })}
+              >
+                <input
+                  type="checkbox"
+                  className="form-checkbox h-5 w-5 text-gray-600"
+                  onChange={invertPalette}
+                  disabled={!canInvertPalette}
+                />
+                <span
+                  className={classNames("mx-2", {
+                    "text-gray-700": canInvertPalette,
+                    "text-gray-400": !canInvertPalette,
+                  })}
+                >
+                  Invert
+                </span>
+              </label>
+            </div>
+          </div>
         </div>
       </div>
 

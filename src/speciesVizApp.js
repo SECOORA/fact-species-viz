@@ -36,10 +36,10 @@ function SpeciesVizApp(props) {
     {
       layerKey: "ooba",
       aphiaId: 105793,
-      year: 2019,
+      year: 2017,
       project: "_ALL",
       month: 'all',
-      palette: "oranges_r",
+      palette: "viridis",
       type: "distribution",
     },
   ]);

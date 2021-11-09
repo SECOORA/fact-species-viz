@@ -18,7 +18,10 @@ module.exports = {
       yellow: colors.amber,
       orange: colors.orange
     }
+  variants: {
+    extend: {
+      display: ["group-hover"],
+    },
   },
-  variants: {},
   plugins: [],
 };

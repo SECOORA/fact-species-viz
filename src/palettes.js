@@ -286,13 +286,12 @@ export const paletteToCssGradient = (palette) => {
 
 export default {
   thermal: thermal,
+  viridis: viridis,
   oranges: oranges,
   purples: purples,
   greens: greens,
   reds: reds,
   blues: blues,
-
-  viridis: viridis,
   oranges_r: oranges_r,
   purples_r: purples_r,
   greens_r: greens_r,
