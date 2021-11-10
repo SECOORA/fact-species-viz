@@ -13,7 +13,7 @@ function Chooser(props) {
 
         <div className="tw-inline-block tw-relative tw-w-full">
           <select
-            className="tw-block tw-appearance-none tw-w-full tw-bg-white tw-border tw-border-gray-400 hover:tw-border-gray-500 tw-px-4 tw-py-2 tw-pr-8 tw-rounded tw-shadow tw-leading-tight focus:tw-outline-none focus:tw-shadow-tw-outline"
+            className="tw-block tw-appearance-none tw-w-full tw-bg-white tw-border tw-border-gray-400 hover:tw-border-gray-500 tw-px-4 tw-py-2 tw-pr-8 tw-rounded tw-shadow tw-leading-tight focus:tw-outline-none focus:tw-shadow-outline"
             value={props.curVal}
             onChange={(e) => {
               const tc = parseInt(e.target.value) || e.target.value;
