@@ -13,8 +13,8 @@ export const IconBase = ({
 }) => {
 	return (
     <div
-      className={classNames("cursor-pointer px-2", extraClasses, {
-        "text-gray-400 cursor-not-allowed": !enabled,
+      className={classNames("tw-cursor-pointer tw-px-2", extraClasses, {
+        "tw-text-gray-400 tw-cursor-not-allowed": !enabled,
         "has-tooltip": tooltip,
       })}
       onClick={(e) => {
@@ -28,7 +28,7 @@ export const IconBase = ({
       {tooltip && enabled && <span className="tooltip">{tooltip}</span>}
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        className={`h-${size} w-${size}`}
+        className={`tw-h-${size} tw-w-${size}`}
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"

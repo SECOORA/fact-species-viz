@@ -21,15 +21,15 @@ const PaletteSwatch = ({
 
 	const sizeClasses = useMemo(() => {
 		const sc = [
-			`h-${height ?? size}`,
-			`w-${width ?? size}`
+			`tw-h-${height ?? size}`,
+			`tw-w-${width ?? size}`
 		]
 		return sc.join(" ")
 	}, [size, height, width])
 
 	return (
 			<div
-				className={classNames(sizeClasses, "bg-gray-100", {"rounded-md": rounded}, extraClasses)}
+				className={classNames(sizeClasses, "tw-bg-gray-100", {"tw-rounded-md": rounded}, extraClasses)}
 				style={{ background: paletteBg }}
 				onClick={onClick}
 			/>

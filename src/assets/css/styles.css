@@ -5,11 +5,11 @@
 @tailwind utilities;
 
 .tooltip {
-  @apply invisible absolute p-1 rounded border border-gray-200 bg-gray-100 shadow-lg mt-8 text-sm
+  @apply tw-invisible tw-absolute tw-p-1 tw-rounded tw-border tw-border-gray-200 tw-bg-gray-100 tw-shadow-lg tw-mt-8 tw-text-sm
 }
 
 .has-tooltip:hover .tooltip {
-  @apply visible z-50
+  @apply tw-visible tw-z-50
 }
 
 .mapboxgl-ctrl-bottom-left .mapboxgl-ctrl {

@@ -6,14 +6,14 @@ function Chooser(props) {
 
   return (
     <div>
-      <div className="text-sm">{props.label}</div>
-      <div className="flex items-center">
+      <div className="tw-text-sm">{props.label}</div>
+      <div className="tw-flex tw-items-center">
 
         {props.before}
 
-        <div className="inline-block relative w-full">
+        <div className="tw-inline-block tw-relative tw-w-full">
           <select
-            className="block appearance-none w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline"
+            className="tw-block tw-appearance-none tw-w-full tw-bg-white tw-border tw-border-gray-400 hover:tw-border-gray-500 tw-px-4 tw-py-2 tw-pr-8 tw-rounded tw-shadow tw-leading-tight focus:tw-outline-none focus:tw-shadow-tw-outline"
             value={props.curVal}
             onChange={(e) => {
               const tc = parseInt(e.target.value) || e.target.value;
@@ -40,9 +40,9 @@ function Chooser(props) {
               );
             })}
           </select>
-          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+          <div className="tw-pointer-events-none tw-absolute tw-inset-y-0 tw-right-0 tw-flex tw-items-center tw-px-2 tw-text-gray-700">
             <svg
-              className="fill-current h-4 w-4"
+              className="tw-fill-current tw-h-4 tw-w-4"
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 20 20"
             >

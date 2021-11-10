@@ -14,20 +14,20 @@ import SpeciesVizApp from "./speciesVizApp.js"
 
 function ErrorFallback({ error }) {
   return (
-    <div className="relative h-full w-full">
-      <div className="h-full w-full absolute flex items-center justify-center bg-gray-500 bg-opacity-50 top-0 left-0">
+    <div className="tw-relative tw-h-full tw-w-full">
+      <div className="tw-h-full tw-w-full tw-absolute tw-flex tw-items-center tw-justify-center tw-bg-gray-500 tw-bg-opacity-50 tw-top-0 tw-left-0">
         <div
           role="alert"
-          className="bg-white rounded shadow p-8 m-4 max-w-md max-h-full overflow-y-scroll text-sm"
+          className="tw-bg-white tw-rounded tw-shadow tw-p-8 tw-m-4 tw-max-w-md tw-max-h-full tw-overflow-y-scroll tw-text-sm"
         >
-          <div className="mb-1">
+          <div className="tw-mb-1">
             Something went wrong, please reload the site.
           </div>
           <details>
             <summary>
               <pre style={{ color: "red" }}>{error.message}</pre>
             </summary>
-            <pre className="text-xs" style={{ color: "maroon" }}>
+            <pre className="tw-text-xs" style={{ color: "maroon" }}>
               {error.stack}
             </pre>
           </details>

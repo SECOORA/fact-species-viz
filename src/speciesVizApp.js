@@ -242,8 +242,8 @@ function SpeciesVizApp(props) {
   }
 
   return (
-    <div className="relative text-base">
-      <div className="flex">
+    <div className="tw-relative tw-text-base">
+      <div className="tw-flex">
         <GLMap
           idField="key"
           mapStyle="mapbox://styles/mz4/ck6m8v8x9052n1iphvif4ilra"
@@ -252,7 +252,7 @@ function SpeciesVizApp(props) {
           mapWidth={700}
           maxZoom={4}
           overlayComponents={
-            <div className="absolute bottom-0 right-0 mb-8 mr-4">
+            <div className="tw-absolute tw-bottom-0 tw-right-0 tw-mb-8 tw-mr-4">
               <Legend
                 maxLevel={maxLevel}
                 palettes={layerData.map((ld) => ld.palette)}
@@ -280,9 +280,9 @@ function SpeciesVizApp(props) {
             );
           })}
         </GLMap>
-        <div className="relative">
+        <div className="tw-relative">
           <div
-            className="tileholder flex flex-col absolute"
+            className="tileholder tw-flex tw-flex-col tw-absolute"
             style={{ left: "-16rem" }}
           >
             {!readOnly &&
@@ -320,18 +320,18 @@ function SpeciesVizApp(props) {
         </div>
       </div>
 
-      <div className="bg-gray-300 border-b border-gray-600 text-sm py-2 px-2 relative">
-        <div className="flex">
-          <img className="w-16 absolute bottom-0 mb-2 border border-gray-300 rounded-md shadow cursor-pointer" src={imgFactLogo} alt="FACT Logo" onClick={() => setReadOnly(!readOnly)}/>
-          <div className="ml-16 mr-4">
-            <span className="ml-2 font-bold">FACT DaViT</span> &middot; <a href="https://secoora.org/fact/" target="_blank">https://secoora.org/fact/</a>
+      <div className="tw-bg-gray-300 tw-border-b tw-border-gray-600 tw-text-sm tw-py-2 tw-px-2 tw-relative">
+        <div className="tw-flex">
+          <img className="tw-w-16 tw-absolute tw-bottom-0 tw-mb-2 tw-border tw-border-gray-300 tw-rounded-md tw-shadow tw-cursor-pointer" src={imgFactLogo} alt="FACT Logo" onClick={() => setReadOnly(!readOnly)}/>
+          <div className="tw-ml-16 tw-mr-4">
+            <span className="tw-ml-2 tw-font-bold">FACT DaViT</span> &middot; <a href="https://secoora.org/fact/" target="_blank">https://secoora.org/fact/</a>
           </div>
           {shownProjectCodes.length > 0 && (
             <div
-              className="inline cursor-pointer"
+              className="tw-inline tw-cursor-pointer"
               onClick={() => setShowCitations(shownProjectCodes)}
             >
-              <div className="inline font-bold">Data Shown: </div>
+              <div className="tw-inline tw-font-bold">Data Shown: </div>
               {shownProjectCodes.map((pc, i) => {
                 return (
                   <span key={i}>

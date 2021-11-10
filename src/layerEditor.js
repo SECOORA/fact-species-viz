@@ -213,7 +213,7 @@ const LayerEditor = (props) => {
   }, [props.currentLayer.palette])
 
 	return (
-    <div className="w-64 bg-gray-300 p-2 h-full border-l border-gray-600">
+    <div className="tw-w-64 tw-bg-gray-300 tw-p-2 tw-h-full tw-border-l tw-border-gray-600">
       <Chooser
         items={aphiaIds}
         labels={speciesNames}
@@ -280,63 +280,63 @@ const LayerEditor = (props) => {
         }
       />
 
-      <div className="flex mx-2 my-4">
+      <div className="tw-flex tw-mx-2 tw-my-4">
         <button
           className={classNames(
-            "text-sm flex-grow rounded-r-none border-r-0  hover:scale-110 focus:outline-none flex justify-center px-4 py-2 rounded font-bold cursor-pointer",
+            "tw-text-sm tw-flex-grow tw-rounded-r-none tw-border-r-0  hover:tw-scale-110 focus:tw-outline-none tw-flex tw-justify-center tw-px-4 tw-py-2 tw-rounded tw-font-bold tw-cursor-pointer",
             {
-              "hover:bg-indigo-200 bg-indigo-100 text-indigo-700 border duration-200 ease-in-out border-indigo-600 transition":
+              "hover:tw-bg-indigo-200 tw-bg-indigo-100 tw-text-indigo-700 tw-border tw-duration-200 tw-ease-in-out tw-border-indigo-600 tw-transition":
                 props.currentLayer.type === "distribution",
-              "hover:bg-gray-200 bg-gray-100 text-gray-700 border duration-200 ease-in-out border-gray-600 transition":
+              "hover:tw-bg-gray-200 tw-bg-gray-100 tw-text-gray-700 tw-border tw-duration-200 tw-ease-in-out tw-border-gray-600 tw-transition":
                 props.currentLayer.type !== "distribution",
             }
           )}
           onClick={() => _updateLayer({ type: "distribution" })}
         >
-          <div className="flex leading-5">Distribution</div>
+          <div className="tw-flex tw-leading-5">Distribution</div>
         </button>
         <button
           className={classNames(
-            "text-sm flex-grow rounded-l-none border-l-0  hover:scale-110 focus:outline-none flex justify-center px-4 py-2 rounded font-bold cursor-pointer",
+            "tw-text-sm tw-flex-grow tw-rounded-l-none tw-border-l-0  hover:tw-scale-110 focus:tw-outline-none tw-flex tw-justify-center tw-px-4 tw-py-2 tw-rounded tw-font-bold tw-cursor-pointer",
             {
-              "hover:bg-indigo-200 bg-indigo-100 text-indigo-700 border duration-200 ease-in-out border-indigo-600 transition":
+              "hover:tw-bg-indigo-200 tw-bg-indigo-100 tw-text-indigo-700 tw-border tw-duration-200 tw-ease-in-out tw-border-indigo-600 tw-transition":
                 props.currentLayer.type === "range",
-              "hover:bg-gray-200 bg-gray-100 text-gray-700 border duration-200 ease-in-out border-gray-600 transition":
+              "hover:tw-bg-gray-200 tw-bg-gray-100 tw-text-gray-700 tw-border tw-duration-200 tw-ease-in-out tw-border-gray-600 tw-transition":
                 props.currentLayer.type !== "range",
             }
           )}
           onClick={() => _updateLayer({ type: "range" })}
         >
-          <div className="flex leading-5">Range</div>
+          <div className="tw-flex tw-leading-5">Range</div>
         </button>
       </div>
 
-      <hr className="my-2" />
+      <hr className="tw-my-2" />
 
-      <div className="mb-2">
-        <div className="text-sm mb-1">Appearance</div>
+      <div className="tw-mb-2">
+        <div className="tw-text-sm tw-mb-1">Appearance</div>
 
-        <div className="relative">
+        <div className="tw-relative">
           <div className="">
-            <div className="dropdown group relative">
-              <div className="inline-block p-1 rounded-t group-hover:bg-gray-100">
+            <div className="dropdown tw-group tw-relative">
+              <div className="tw-inline-block tw-p-1 tw-rounded-t group-hover:tw-bg-gray-100">
                 <PaletteSwatch
                   palette={props.currentLayer.palette}
                   size={7}
                   extraClasses={classNames(
-                    "cursor-pointer shadow border-gray-700 border-2"
+                    "tw-cursor-pointer tw-shadow tw-border-gray-700 tw-border-2"
                   )}
                 />
               </div>
 
-              <div className="hidden group-hover:block absolute w-full bg-gray-100 z-50 p-1 shadow rounded-bl rounded-br rounded-tr">
-                <div className="flex justify-around">
+              <div className="tw-hidden group-hover:tw-block tw-absolute tw-w-full tw-bg-gray-100 tw-z-50 tw-p-1 tw-shadow tw-rounded-bl tw-rounded-br tw-rounded-tr">
+                <div className="tw-flex tw-justify-around">
                   {Object.keys(shownPalettes).map((p) => {
                     return (
                       <div
                         key={`pal-${p}`}
-                        className={classNames("p-1 rounded-md", {
-                          "bg-gray-400 shadow": p === displayPaletteName,
+                        className={classNames("tw-p-1 tw-rounded-md", {
+                          "tw-bg-gray-400 tw-shadow": p === displayPaletteName,
                         })}
                       >
                         <PaletteSwatch
@@ -344,10 +344,10 @@ const LayerEditor = (props) => {
                           size={6}
                           // rounded={false}
                           onClick={() => _updateLayer({ palette: p })}
-                          extraClasses={classNames("cursor-pointer", {
-                            "shadow-lg border-gray-700 border-2":
+                          extraClasses={classNames("tw-cursor-pointer", {
+                            "tw-shadow-lg tw-border-gray-700 tw-border-2":
                               p === displayPaletteName,
-                            "shadow border border-gray-400":
+                            "tw-shadow tw-border tw-border-gray-400":
                               p !== displayPaletteName,
                           })}
                         />
@@ -358,23 +358,23 @@ const LayerEditor = (props) => {
               </div>
             </div>
 
-            <div className="absolute right-0 h-full top-0">
+            <div className="tw-absolute tw-right-0 tw-h-full tw-top-0">
               <label
-                className={classNames("inline-flex items-center", {
-                  "cursor-pointer": canInvertPalette,
-                  "cursor-not-allowed": !canInvertPalette,
+                className={classNames("tw-inline-flex tw-items-center", {
+                  "tw-cursor-pointer": canInvertPalette,
+                  "tw-cursor-not-allowed": !canInvertPalette,
                 })}
               >
                 <input
                   type="checkbox"
-                  className="form-checkbox h-5 w-5 text-gray-600"
+                  className="tw-form-checkbox tw-h-5 tw-w-5 tw-text-gray-600"
                   onChange={invertPalette}
                   disabled={!canInvertPalette}
                 />
                 <span
-                  className={classNames("mx-2", {
-                    "text-gray-700": canInvertPalette,
-                    "text-gray-400": !canInvertPalette,
+                  className={classNames("tw-mx-2", {
+                    "tw-text-gray-700": canInvertPalette,
+                    "tw-text-gray-400": !canInvertPalette,
                   })}
                 >
                   Invert
@@ -386,12 +386,12 @@ const LayerEditor = (props) => {
       </div>
 
       <div>
-        <label htmlFor="opacity" className="block text-sm">
+        <label htmlFor="opacity" className="tw-block tw-text-sm">
           Opacity
         </label>
-        <div className="inline-block relative w-full">
+        <div className="tw-inline-block tw-relative tw-w-full">
           <input
-            className="w-full"
+            className="tw-w-full"
             type="range"
             id="opacity"
             name="opacity"
@@ -405,25 +405,25 @@ const LayerEditor = (props) => {
         </div>
       </div>
 
-      <hr className="my-2" />
+      <hr className="tw-my-2" />
 
       <div>
-        <div className="text-sm mb-1 flex">
+        <div className="tw-text-sm tw-mb-1 tw-flex">
           Citations
           <IconZoom
             onClick={() => props.onShowCitations(speciesProjects.slice(1))}
             size={4}
-            extraClasses="flex-shrink"
+            extraClasses="tw-flex-shrink"
           />
         </div>
 
         {speciesProjects.slice(1).map((sp) => {
           return (
-            <div key={`cite-${sp}`} className="text-xs mb-1">
-              <div className="font-bold truncate">
+            <div key={`cite-${sp}`} className="tw-text-xs tw-mb-1">
+              <div className="tw-font-bold tw-truncate">
                 {props.citations[sp]?.shortname}
               </div>
-              <div className="truncate">{props.citations[sp]?.citation}</div>
+              <div className="tw-truncate">{props.citations[sp]?.citation}</div>
               {props.citations[sp]?.website && (
                 <a href={props.citations[sp]?.website} target="_blank">
                   {props.citations[sp]?.website}

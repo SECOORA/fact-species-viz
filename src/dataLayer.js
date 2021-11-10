@@ -65,7 +65,7 @@ const DataLayer = ({
   month = "all",
   project = "_ALL",
   palette = "thermal",
-  beforeId = "z-0",
+  beforeId = "tw-z-0",
   opacity = 50,
   layerKey,
   updateLegendLevel,

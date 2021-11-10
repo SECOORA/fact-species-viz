@@ -137,8 +137,8 @@ function MapGrid(props) {
     <div className="mapgrid">
       {(props.variants || DEFAULT_VARIANTS).map((k, kk) => {
         return (
-          <div className="relative" style={{ maxHeight: mapHeight }} key={k}>
-            <h3 className="absolute top-0 left-0 font-bold z-50">{k}</h3>
+          <div className="tw-relative" style={{ maxHeight: mapHeight }} key={k}>
+            <h3 className="tw-absolute tw-top-0 tw-left-0 tw-font-bold tw-z-50">{k}</h3>
             <GLMap
               idField="key"
               mapStyle="mapbox://styles/mz4/ck6m8v8x9052n1iphvif4ilra"

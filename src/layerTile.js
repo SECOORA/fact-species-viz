@@ -28,49 +28,49 @@ const LayerTile = (props) => {
 
   return (
     <div
-      className={classNames("w-64 mt-1 rounded-sm rounded-r-none", {
-        "bg-gray-300 border-l border-t border-b border-gray-600":
+      className={classNames("tw-w-64 tw-mt-1 tw-rounded-sm tw-rounded-r-none", {
+        "tw-bg-gray-300 tw-border-l tw-border-t tw-border-b tw-border-gray-600":
           props.isActive,
-        "bg-white border-l border-t border-b border-white shadow":
+        "tw-bg-white tw-border-l tw-border-t tw-border-b tw-border-white tw-shadow":
           !props.isActive,
       })}
     >
-      <div className="flex flex-col relative">
+      <div className="tw-flex tw-flex-col tw-relative">
         {props.isActive && (
-          <div className="h-full w-2 bg-gray-300 absolute top-0" style={{right: "-2px"}}></div>
+          <div className="tw-h-full tw-w-2 tw-bg-gray-300 tw-absolute tw-top-0" style={{right: "-2px"}}></div>
         )}
         <div
-          className="flex items-center px-2 py-2 cursor-pointer"
+          className="tw-flex tw-items-center tw-px-2 tw-py-2 tw-cursor-pointer"
           onClick={(e) => props.onClick()}
         >
           <PaletteSwatch
             palette={props.palette}
-            extraClasses={"flex-initial shadow"}
+            extraClasses={"tw-flex-initial tw-shadow"}
             size={8}
           />
-          <div className="flex flex-col text-sm px-3 flex-grow">
-            <div className="text-gray-700 font-bold capitalize">
+          <div className="tw-flex tw-flex-col tw-text-sm tw-px-3 tw-flex-grow">
+            <div className="tw-text-gray-700 tw-font-bold tw-capitalize">
               {props.speciesName ?? props.aphiaId}
             </div>
-            <div className="text-gray-600 capitalize text-sm">
+            <div className="tw-text-gray-600 tw-capitalize tw-text-sm">
               {props.year} &middot; {monthName}{" "}
               {props.project !== "_ALL" && (
                 <>
                   {" "}
-                  &middot; <span className="font-bold">{props.project}</span>
+                  &middot; <span className="tw-font-bold">{props.project}</span>
                 </>
               )}
             </div>
           </div>
 
-          <div className="flex-initial text-right">
-            <span className="m-1 bg-gray-200 rounded-full px-2 text-xs leading-loose capitalize">
+          <div className="tw-flex-initial tw-text-right">
+            <span className="tw-m-1 tw-bg-gray-200 tw-rounded-full tw-px-2 tw-text-xs tw-leading-loose tw-capitalize">
               {typeLabel}
             </span>
           </div>
         </div>
 
-        <div className="z-10 h-full flex items-center justify-evenly mb-1">
+        <div className="tw-z-10 tw-h-full tw-flex tw-items-center tw-justify-evenly tw-mb-1">
           <IconUp
             size={4}
             onClick={props.onLayerUp}

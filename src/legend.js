@@ -5,9 +5,9 @@ import PaletteSwatch from "./paletteSwatch";
 
 const Legend = (props) => {
 	return (
-    <div className="inline-flex text-sm items-center bg-white border border-gray-300 shadow px-2 rounded-md">
+    <div className="tw-inline-flex tw-text-sm tw-items-center tw-bg-white tw-border tw-border-gray-300 tw-shadow tw-px-2 tw-rounded-md">
       <div>0</div>
-      <div className="flex flex-col border border-gray-400 mx-1">
+      <div className="tw-flex tw-flex-col tw-border tw-border-gray-400 tw-mx-1">
         {props.palettes?.map((p, idx) => {
           return (
             <PaletteSwatch
@@ -15,7 +15,7 @@ const Legend = (props) => {
               palette={p}
               height={2}
               width={32}
-              rounded={false}
+              tw-rounded={false}
               extraClasses={""}
             />
           );
@@ -24,13 +24,11 @@ const Legend = (props) => {
       <div>{props.maxLevel} Animals Detected</div>
     </div>
   );
-
 }
 
 Legend.propTypes = {
-	maxLevel: PropTypes.number.isRequired,
-	palettes: PropTypes.array,
-
+  maxLevel: PropTypes.number.isRequired,
+  palettes: PropTypes.array,
 }
 
 export default Legend;

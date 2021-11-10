@@ -109,7 +109,7 @@ function GLMap(props) {
   // TODO: allBbox should be a memo calc on layerData
 
   return (
-    <div className="glmap-container block w-full">
+    <div className="glmap-container tw-block tw-w-full">
       <div className="glmap-internal-container">
         <AutoSizer disableHeight onResize={onAutoResize}>
           {({ asWidth }) => (
@@ -140,12 +140,12 @@ function GLMap(props) {
             </ReactMapGL>
           )}
         </AutoSizer>
-        <div className="overlay-container absolute top-0 left-0 w-full h-full pointer-events-none">
+        <div className="overlay-container tw-absolute tw-top-0 tw-left-0 tw-w-full tw-h-full tw-pointer-events-none">
           {props.overlayComponents}
           {noData && (
-            <div className="w-full h-full bg-white opacity-50 flex place-content-center">
-              <div className="flex flex-col justify-center items-center">
-                <p className="text-4xl">NO DATA</p>
+            <div className="tw-w-full tw-h-full tw-bg-white tw-opacity-50 tw-flex tw-place-content-center">
+              <div className="tw-flex tw-flex-col tw-justify-center tw-items-center">
+                <p className="tw-text-4xl">NO DATA</p>
                 {noDataReason && <p>{noDataReason}</p>}
               </div>
             </div>
