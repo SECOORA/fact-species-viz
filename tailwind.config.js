@@ -2,6 +2,7 @@ const colors = require('tailwindcss/colors');
 
 module.exports = {
   prefix: 'tw-',
+  important: '#app',
   future: {
     removeDeprecatedGapUtilities: true,
   },
@@ -38,6 +39,9 @@ module.exports = {
       display: ["group-hover"],
       fontSize: ["hover"],
     },
+  },
+  corePlugins: {
+    preflight: false,
   },
   plugins: [],
 };
