@@ -283,7 +283,7 @@ function SpeciesVizApp(props) {
         <div className="tw-relative">
           <div
             className="tileholder tw-flex tw-flex-col tw-absolute"
-            style={{ left: "-16rem" }}
+            style={{ left: "-16em" }}
           >
             {!readOnly &&
               layerData.map((ld, idx) => {
