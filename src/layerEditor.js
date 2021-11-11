@@ -234,8 +234,34 @@ const LayerEditor = (props) => {
 
       <Chooser
         items={[
-          2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019,
-          2020, "all"
+          2009,
+          2010,
+          2011,
+          2012,
+          2013,
+          2014,
+          2015,
+          2016,
+          2017,
+          2018,
+          2019,
+          2020,
+          "all",
+        ]}
+        labels={[
+          2009,
+          2010,
+          2011,
+          2012,
+          2013,
+          2014,
+          2015,
+          2016,
+          2017,
+          2018,
+          2019,
+          2020,
+          "All",
         ]}
         enabledItems={[...availYears, "all"]}
         onClick={(v) => _updateLayer({ year: v })}
@@ -260,6 +286,9 @@ const LayerEditor = (props) => {
       <Chooser
         items={[...Array(12).keys(), "all"].map((m) =>
           m !== "all" ? m + 1 : m
+        )}
+        labels={[...Array(12).keys(), "all"].map((m) =>
+          m !== "all" ? m + 1 : "All"
         )}
         enabledItems={[...(availMonths || []), "all"]}
         onClick={(v) => _updateLayer({ month: v })}
