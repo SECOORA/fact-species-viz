@@ -967,6 +967,20 @@ def process(trackercode: str, year: str, agg_method: str, summary_method: str, m
                             )
                         )
 
+                    # if we only have a single year for a project, it's the all
+                    if not has_multiple and not agg_all_data:
+                        for pc in [trackercode, '_ALL']:
+                            ret_vals.append(
+                                to_geojson(
+                                    summary,
+                                    **{
+                                        **ffname,
+                                        'project_code': pc,
+                                        'year': 'all',
+                                    }
+                                )
+                            )
+
                 except Exception as e:
                     print("EXCEPT", imonth, e, file=sys.stderr)
 
