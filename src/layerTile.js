@@ -10,10 +10,10 @@ const LayerTile = (props) => {
 
   const monthName = useMemo(() => {
     if (!props.month || props.month === "all") {
-      return "All";
+      return "All Months";
     }
 
-    const d = new Date(`${props.year}-${props.month}-15`);    // do middle of the month so the user's timezone doesn't take us into prev month
+    const d = new Date(`2020-${props.month}-15`);    // do middle of the month so the user's timezone doesn't take us into prev month
     return d.toLocaleString('default', {month: 'short'});
   }, [props.year, props.month]);
 
@@ -106,7 +106,7 @@ const LayerTile = (props) => {
 LayerTile.propTypes = {
 	aphiaId: PropTypes.number,
   speciesName: PropTypes.string,
-	year: PropTypes.number,
+	year: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
   month: PropTypes.any,
 	palette: PropTypes.string,
 	onClick: PropTypes.func,

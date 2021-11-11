@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -125,7 +125,7 @@ async def citations():
 
 
 @app.get('/atp/{aphia_id}/{type}/{year}')
-async def get_atp_data(aphia_id: int, year: int, type: ATPType, month: Optional[int] = None, project: Optional[str]=None):
+async def get_atp_data(aphia_id: int, year: Union[int, str], type: ATPType, month: Optional[int] = None, project: Optional[str]=None):
     kwargs = {
         'species_aphia_id': aphia_id,
         'year': year,

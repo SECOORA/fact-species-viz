@@ -13,6 +13,13 @@ from tqdm import tqdm
 from .log import logger
 
 
+class NoDataException(Exception):
+    """
+    Means no data was found for the specific project/year.
+    """
+    pass
+
+
 def get_conn() -> Engine:
     """
     Pulls database connection info from environment and creates an active connection.
@@ -99,6 +106,9 @@ def get_df_with_species(conn: Engine, table_name: str, trackercode: str, bin_siz
             ):
             progress_bar.update(1)
             frames.append(chunk_df)
+
+    if len(frames) == 0:
+        raise NoDataException(f"No data found for {table_name}/{trackercode}")
 
     df = pd.concat(frames)
 

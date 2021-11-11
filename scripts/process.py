@@ -856,26 +856,50 @@ def process(trackercode: str, year: str, agg_method: str, summary_method: str, m
         range_high = math.inf
 
         frames_and_metadata = [
-            (gdf, [trackercode])
+            (gdf, year, [trackercode])
         ]
-        has_multiple = False
 
         # load other agg cached datasets of the same species
-        agg_data = load_agg_cache(year, species_aphia_id, agg_discrim, skip=trackercode)
+        agg_data = load_agg_cache(year, species_aphia_id, agg_discrim, skip=[(trackercode, year)])
         if agg_data:
             all_agg = pd.concat(agg_data.values()).set_index(['monthcollected'])
             agg_gdf = pd.concat([gdf, all_agg])
+            agg_trackercodes, agg_years = zip(*agg_data.keys())
 
-            print(f"Found {len(agg_data)} other cached data for {species_aphia_id}/{year}, projects: {','.join(agg_data.keys())}", file=sys.stderr)
+            print(f"Found {len(agg_data)} other cached data for {species_aphia_id}/{year}, projects: {','.join(agg_trackercodes)}", file=sys.stderr)
 
             frames_and_metadata.append(
-                (agg_gdf, [trackercode, *agg_data.keys()])
+                (agg_gdf, year, [trackercode, *agg_trackercodes])
             )
-            has_multiple = True
         else:
             print(f"No other cached data for {species_aphia_id}/{year}", file=sys.stderr)
 
-        for cur_df, cur_metadata in frames_and_metadata:
+        # load every available year for this species
+        agg_all_data = load_agg_cache(None, species_aphia_id, agg_discrim, skip=[(trackercode, year), *agg_data.keys()])
+        if agg_all_data:
+            all_years_agg = pd.concat(agg_all_data.values()).set_index(['monthcollected'])
+
+            if agg_data:
+                # did we load other project/same year? if so, append that one year's full projects aggregate with this new one
+                all_years_gdf = pd.concat([all_years_agg, agg_gdf])
+            else:
+                # append new one with this project/year only
+                all_years_gdf = pd.concat([all_years_agg, gdf])
+
+            agg_trackercodes, agg_years = zip(*agg_all_data.keys())
+
+            frames_and_metadata.append(
+                (all_years_gdf, [*set([year, *agg_years])], [*set([trackercode, *agg_trackercodes])])
+            )
+
+            print(f"Found {len(agg_all_data)} other cached data for {species_aphia_id}/ALL YEARS ({len(set(agg_years))}), projects: {','.join(set(agg_trackercodes))}", file=sys.stderr)
+        else:
+            print(f"No other cached data for {species_aphia_id}/ALL YEARS", file=sys.stderr)
+
+        for cur_df, cur_year, cur_metadata in frames_and_metadata:
+            is_all_year = isinstance(cur_year, list)
+            has_multiple = len(cur_metadata) > 1        # frame was created from multiple tracker projects
+
             # for each month:
             for imonth in [slice(None), *cur_df.index.unique()]:
                 is_all = isinstance(imonth, slice)
@@ -888,7 +912,7 @@ def process(trackercode: str, year: str, agg_method: str, summary_method: str, m
                     'species_common_name': species_common_name,
                     'species_scientific_name': species_scientific_name,
                     'species_aphia_id': species_aphia_id,
-                    'year': str(year),
+                    'year': "all" if is_all_year else str(year),
                     'month': "all" if is_all else str(imonth),
                     'type': summary_type,
                     **get_multiple_metadata(cur_metadata)       # will join all metadata by newlines for every project
@@ -1034,17 +1058,21 @@ def to_disk(geoobj, fname: str, **kwargs):
 
 #agg_data = load_agg_cache(year, species_aphia_id, skip=trackercode)
 
-def load_agg_cache(year: str, species_aphia_id: str, agg_discrim: str, skip: str=None) -> Dict[str, geopandas.GeoDataFrame]:
+def load_agg_cache(year: Optional[str], species_aphia_id: str, agg_discrim: str, skip: Optional[List[Tuple[str, str]]]=None) -> Dict[Tuple[str, str], geopandas.GeoDataFrame]:
     """
     Loads all matching year/aphia_id aggregate caches from disk.
-    Returns a dict of project code -> geodataframe.
+    If year is None, load them all with a glob.
+    Returns a dict of project code, year tuples -> geodataframe.
     """
-    ret: Dict[str, geopandas.GeoDataFrame] = {}
+    ret: Dict[Tuple[str, str], geopandas.GeoDataFrame] = {}
+
+    if year is None:
+        year = '*'      # glob the year too if we request all years
 
     p = Path(CONFIG.data_dir)
     for pp in p.glob(f'*-{year}-{species_aphia_id}-{agg_discrim}.geojson'):
         pproject, pyear, paphia, _ = pp.stem.split('-')
-        if pproject == skip:
+        if (pproject, pyear) in skip:
             continue
 
         bio = None
@@ -1053,8 +1081,8 @@ def load_agg_cache(year: str, species_aphia_id: str, agg_discrim: str, skip: str
             bio.seek(0)
 
         jsondata = orjson.loads(bio.getvalue())
-        ret[pproject] = geopandas.GeoDataFrame.from_features(jsondata['features'])
-        ret[pproject].datecollected = ret[pproject].datecollected.apply(pd.Timestamp)
+        ret[(pproject, pyear)] = geopandas.GeoDataFrame.from_features(jsondata['features'])
+        ret[(pproject, pyear)].datecollected = ret[(pproject, pyear)].datecollected.apply(pd.Timestamp)
 
     return ret
 

@@ -1,7 +1,8 @@
 import json
 from collections import defaultdict
+from functools import cmp_to_key
 from json.decoder import JSONDecodeError
-from typing import Any, Dict, Optional, Mapping, Sequence
+from typing import Any, Dict, Optional, Mapping, Sequence, Union
 
 from redis import Redis
 
@@ -63,12 +64,17 @@ def get_species_years(aphia_id: int):
     ret = set()
     for vv in v:
         _, _, _, year, _, _ = vv.decode('utf-8').split(":")
+
+        # assume an all available
+        if year == 'all':
+            continue
+
         ret.add(int(year))
 
     return sorted(ret)
 
 
-def get_species_months(aphia_id: int, year: int):
+def get_species_months(aphia_id: int, year: Union[int, str]):
     assert r
 
     v = r.keys(f"data:{aphia_id}:*:{year}:*:*")
@@ -136,7 +142,7 @@ def get_data_inventory() -> Sequence[Any]:
 
         aphia_id = int(aphia_id_s)
         month = int(month_s)
-        year = int(year_s)
+        year = int(year_s) if year_s != 'all' else year_s
 
         if not aphia_id in species:
             species[aphia_id] = {
@@ -146,6 +152,21 @@ def get_data_inventory() -> Sequence[Any]:
             }
 
         species[aphia_id]['byProject'][project][year].add(month)
+
+    def custom_sort(a, b):
+        a = a[0]
+        b = b[0]
+        if a == 'all':
+            return 1
+        if b == 'all':
+            return -1
+
+        if a < b:
+            return -1
+        elif a > b:
+            return 1
+
+        return 0
 
     # transform from dicts (used for collection) to lists
     transformed = [
@@ -160,7 +181,7 @@ def get_data_inventory() -> Sequence[Any]:
                             'year': year,
                             'months': sorted(months)
                         }
-                        for year, months in sorted(projectData.items(), key=lambda t: t[0])
+                        for year, months in sorted(projectData.items(), key=cmp_to_key(custom_sort))
                     ]
                 }
                 for projectCode, projectData in data['byProject'].items()

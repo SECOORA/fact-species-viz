@@ -26,17 +26,19 @@ const LayerEditor = (props) => {
     }
 
     let newYear = updatedLayer.year;
-    const availYears = yearData.map(yd => yd.year),
-      okYear = availYears.indexOf(newYear) !== -1;
+    if (newYear !== 'all') {
+      const availYears = yearData.map(yd => yd.year),
+        okYear = availYears.indexOf(newYear) !== -1;
 
-    if (!okYear) {
-      // if the year doesn't exist, we'll need to change the year (and likely the month)
+      if (!okYear) {
+        // if the year doesn't exist, we'll need to change the year (and likely the month)
 
-      // get the closest years by taking difference from expected year, we might have two 1s if say a gap exists
-      // ie we're currently on 2016 and (2015 yes, 2016 no, 2017 yes) is the situation, and that's ok, we just need any valid year
-      const closestYears = _.sortBy(availYears, y => Math.abs(y - newYear));
-      newYear = closestYears[0];
+        // get the closest years by taking difference from expected year, we might have two 1s if say a gap exists
+        // ie we're currently on 2016 and (2015 yes, 2016 no, 2017 yes) is the situation, and that's ok, we just need any valid year
+        const closestYears = _.sortBy(availYears, y => Math.abs(y - newYear));
+        newYear = closestYears[0];
 
+      }
     }
 
     // now, adjust month if necessary.
@@ -233,9 +235,9 @@ const LayerEditor = (props) => {
       <Chooser
         items={[
           2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019,
-          2020,
+          2020, "all"
         ]}
-        enabledItems={availYears}
+        enabledItems={[...availYears, "all"]}
         onClick={(v) => _updateLayer({ year: v })}
         curVal={props.currentLayer.year}
         label="Year"
