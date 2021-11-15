@@ -93,6 +93,36 @@ function GLMap(props) {
     })
   }
 
+  const onMapHover = (e) => {
+    if (!props.onHover) {
+      return;
+    }
+
+    if (e.features.length > 0) {
+      let feats = [...e.features];
+
+      for (let i = 0; i < feats.length; i++) {
+        // take first feature, strip out any matching that source key
+        feats = [...feats.slice(0, i+1), ...feats.slice(i).filter(f => f.source != feats[i].source)];
+      }
+
+      // console.info(feats, e);
+      const [lon, lat] = e.lngLat;
+      props.onHover({
+        lon: lon,
+        lat: lat,
+        layers: feats.map(f => {
+          return {
+            id: f.layer.id,
+            ...f.properties
+          }
+        })
+      })
+    } else {
+      props.onHover({});
+    }
+  }
+
     //   const newAllBBox = bbox(allFeatures);
 
     //   setStyles(newStyles);
@@ -120,7 +150,9 @@ function GLMap(props) {
               interactiveLayerIds={
                 props.interactiveLayerIds || Object.keys(props.layerData || {})
               }
-              // onHover={onMapHover}
+              onHover={onMapHover}
+              // onClick={onMapHover}
+
               onViewportChange={setViewport}
               mapboxApiAccessToken={process.env.MAPBOX_TOKEN}
             >

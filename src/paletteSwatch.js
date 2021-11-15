@@ -12,7 +12,8 @@ const PaletteSwatch = ({
 	width,
 	rounded = true,
 	extraClasses,
-	onClick
+	onClick,
+	highlightValue
 }) => {
 
 	const paletteBg = useMemo(() => {
@@ -28,12 +29,28 @@ const PaletteSwatch = ({
 	}, [size, height, width])
 
 	return (
-			<div
-				className={classNames(sizeClasses, "tw-bg-gray-100", {"tw-rounded-md": rounded}, extraClasses)}
-				style={{ background: paletteBg }}
-				onClick={onClick}
-			/>
-	)
+    <div className="tw-relative">
+      <div
+        className={classNames(
+          sizeClasses,
+          "tw-bg-gray-100",
+          { "tw-rounded-md": rounded },
+          extraClasses
+        )}
+        style={{ background: paletteBg }}
+        onClick={onClick}
+      />
+      {highlightValue !== undefined && (
+        <div
+          className={classNames(
+            "tw-absolute tw-border-l-4 tw-z-50 tw-border-black tw-top-0 tw-w-1",
+            `tw-h-${height ?? size}`
+          )}
+          style={{ left: `${highlightValue.toFixed(2) * 100}%` }}
+        ></div>
+      )}
+    </div>
+  );
 }
 
 PaletteSwatch.propTypes = {
@@ -43,7 +60,8 @@ PaletteSwatch.propTypes = {
 	width: PropTypes.number,
 	rounded: PropTypes.bool,
 	extraClasses: PropTypes.string,
-	onClick: PropTypes.func
+	onClick: PropTypes.func,
+	highlightValue: PropTypes.number
 }
 
 export default PaletteSwatch;

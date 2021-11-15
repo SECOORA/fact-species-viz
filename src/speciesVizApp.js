@@ -11,9 +11,12 @@ import LayerTile from "./layerTile.js";
 import LayerEditor from "./layerEditor.js";
 import Legend from "./legend.js";
 import Palettes from "./palettes.js";
+import PaletteSwatch from "./paletteSwatch.js";
 import {IconPlus} from "./icon.js";
 
 import imgFactLogo from './assets/img/fact_logo.jpg';
+import { Popup } from "react-map-gl";
+import { objectTypeAnnotation } from "@babel/types";
 
 
 const getRandomItem = (iterable) => iterable[Math.floor(Math.random() * iterable.length)]
@@ -46,6 +49,7 @@ function SpeciesVizApp(props) {
   const [activeIdx, setActiveIdx] = useState(0);
   const [showCitations, setShowCitations] = useState([]);   // list of project codes
   const [readOnly, setReadOnly] = useState(false);      // removes interactive UI
+  const [hoverData, setHoverData] = useState({});       // lat, lon, layers
 
   const maxLevel = useMemo(() => {
     return Math.max(...Object.values(maxLevels));
@@ -241,6 +245,71 @@ function SpeciesVizApp(props) {
     }
   }
 
+  const hoverPopup = useMemo(() => {
+    if (Object.keys(hoverData).length === 0) {
+      return <></>
+    }
+
+    const selLayerKeys = hoverData.layers.map(l => l.id),
+      selLayers = layerData.filter(ld => selLayerKeys.indexOf(ld.layerKey) !== -1);
+
+    return (
+      <Popup
+        tipSize={10}
+        anchor='left'
+        longitude={hoverData.lon}
+        latitude={hoverData.lat}
+        closeOnClick={false}
+        closeButton={false}
+        offsetLeft={5}
+        offsetTop={0}
+        className={"glmap-popup"}
+      >
+        <div className="tw-flex tw-flex-col">
+          <div className="tw-text-sm">{hoverData.lat.toFixed(3)}, {hoverData.lon.toFixed(3)}</div>
+
+          <div>
+            {selLayers.map((l, i) => {
+              let monthName = (!l.month || l.month === "all") ? "All Months" : new Date(`2020-${l.month}-15`).toLocaleString("default", { month: "short" });
+
+              return (
+                <div
+                  key={`popup-${i}`}
+                  className="tw-flex tw-items-center tw-text-xs tw-gap-2"
+                >
+                  <div className="tw-w-6 tw-text-right">{hoverData.layers[i].level}</div>
+                  <div>
+                    <PaletteSwatch
+                      palette={l.palette}
+                      extraClasses={"tw-shadow tw-border tw-border-black"}
+                      height={4}
+                      width={20}
+                      rounded={false}
+                      highlightValue={(hoverData.layers[i].level - 1) / maxLevel}
+                    />
+                  </div>
+                  <div className="tw-text-gray-700 tw-font-bold tw-capitalize">
+                    {speciesLookup[l.aphiaId]?.commonName}
+                  </div>
+                  <div className="tw-text-gray-600 tw-capitalize">
+                    {l.year} &middot; {monthName}{" "}
+                    {l.project !== "_ALL" && (
+                      <>
+                        {" "}
+                        &middot;{" "}
+                        <span className="tw-font-bold">{l.project}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </Popup>
+    );
+  }, [hoverData]);
+
   return (
     <div className="tw-relative tw-text-base">
       <div className="tw-flex">
@@ -251,6 +320,8 @@ function SpeciesVizApp(props) {
           mapHeight={700}
           mapWidth={700}
           maxZoom={4}
+          interactiveLayerIds={layerData.map((ld) => ld.layerKey)}
+          onHover={setHoverData}
           overlayComponents={
             <div className="tw-absolute tw-bottom-0 tw-right-0 tw-mb-8 tw-mr-4">
               <Legend
@@ -279,6 +350,7 @@ function SpeciesVizApp(props) {
               />
             );
           })}
+          {hoverPopup}
         </GLMap>
         <div className="tw-relative">
           <div

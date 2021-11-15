@@ -15,7 +15,7 @@ const Legend = (props) => {
               palette={p}
               height={2}
               width={32}
-              tw-rounded={false}
+              rounded={false}
               extraClasses={""}
             />
           );
