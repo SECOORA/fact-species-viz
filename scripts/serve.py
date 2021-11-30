@@ -60,7 +60,11 @@ async def process_defaults(limit: Optional[str] = None):
         'BLKTP',
         'FSUGG',
         'FLKEYST',
-        'TQCS'
+        'TQCS',
+        'COBCRP',
+        'CGJACK',
+        'GADNRTT',
+        'SCDNRBTP',
     ]
 
     if limit is not None:
