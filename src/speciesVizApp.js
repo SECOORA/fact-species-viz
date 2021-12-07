@@ -251,12 +251,14 @@ function SpeciesVizApp(props) {
     }
 
     const selLayerKeys = hoverData.layers.map(l => l.id),
-      selLayers = layerData.filter(ld => selLayerKeys.indexOf(ld.layerKey) !== -1);
+      selLayers = layerData.filter(ld => selLayerKeys.indexOf(ld.layerKey) !== -1),
+      hasDists = selLayers.filter(ld => ld.type === 'distribution').length > 0,
+      rangeWClass = hasDists ? 'tw-w-28' : '';
 
     return (
       <Popup
         tipSize={10}
-        anchor='left'
+        anchor="left"
         longitude={hoverData.lon}
         latitude={hoverData.lat}
         closeOnClick={false}
@@ -266,28 +268,53 @@ function SpeciesVizApp(props) {
         className={"glmap-popup"}
       >
         <div className="tw-flex tw-flex-col">
-          <div className="tw-text-sm">{hoverData.lat.toFixed(1)}, {hoverData.lon.toFixed(1)}</div>
+          <div className="tw-text-sm">
+            {hoverData.lat.toFixed(1)}, {hoverData.lon.toFixed(1)}
+          </div>
 
           <div>
             {selLayers.map((l, i) => {
-              let monthName = (!l.month || l.month === "all") ? "All Months" : new Date(`2020-${l.month}-15`).toLocaleString("default", { month: "short" });
+              let monthName =
+                !l.month || l.month === "all"
+                  ? "All Months"
+                  : new Date(`2020-${l.month}-15`).toLocaleString("default", {
+                      month: "short",
+                    });
 
               return (
                 <div
                   key={`popup-${i}`}
                   className="tw-flex tw-items-center tw-text-xs tw-gap-2"
                 >
-                  <div className="tw-w-6 tw-text-right">{hoverData.layers[i].level}</div>
-                  <div>
-                    <PaletteSwatch
-                      palette={l.palette}
-                      extraClasses={"tw-shadow tw-border tw-border-black"}
-                      height={4}
-                      width={20}
-                      rounded={false}
-                      highlightValue={(hoverData.layers[i].level - 1) / maxLevel}
-                    />
-                  </div>
+                  {l.type === "distribution" ? (
+                    <>
+                      <div className="tw-w-6 tw-text-right">
+                        {hoverData.layers[i].level}
+                      </div>
+                      <div>
+                        <PaletteSwatch
+                          palette={l.palette}
+                          extraClasses={"tw-shadow tw-border tw-border-black"}
+                          height={4}
+                          width={20}
+                          rounded={false}
+                          highlightValue={
+                            (hoverData.layers[i].level - 1) / maxLevel
+                          }
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <div className={rangeWClass}>
+                      <PaletteSwatch
+                        palette={l.palette}
+                        extraClasses={"tw-shadow tw-border tw-border-black"}
+                        holderClasses={"tw-float-right"}
+                        size={4}
+                        rounded={false}
+                      />
+                    </div>
+                  )}
                   <div className="tw-text-gray-700 tw-font-bold tw-capitalize">
                     {speciesLookup[l.aphiaId]?.commonName}
                   </div>
@@ -326,7 +353,8 @@ function SpeciesVizApp(props) {
             <div className="tw-absolute tw-bottom-0 tw-right-0 tw-mb-8 tw-mr-4">
               <Legend
                 maxLevel={maxLevel}
-                palettes={layerData.map((ld) => ld.palette)}
+                palettes={layerData.filter(ld => ld.type === 'distribution').map((ld) => ld.palette)}
+                presents={layerData.filter(ld => ld.type === 'range').map(ld => ld.palette)}
               />
             </div>
           }

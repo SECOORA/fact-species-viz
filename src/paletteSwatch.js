@@ -12,6 +12,7 @@ const PaletteSwatch = ({
 	width,
 	rounded = true,
 	extraClasses,
+	holderClasses,
 	onClick,
 	highlightValue
 }) => {
@@ -29,7 +30,7 @@ const PaletteSwatch = ({
 	}, [size, height, width])
 
 	return (
-    <div className="tw-relative">
+    <div className={classNames("tw-relative", holderClasses)}>
       <div
         className={classNames(
           sizeClasses,
@@ -60,6 +61,7 @@ PaletteSwatch.propTypes = {
 	width: PropTypes.number,
 	rounded: PropTypes.bool,
 	extraClasses: PropTypes.string,
+	holderClasses: PropTypes.string,
 	onClick: PropTypes.func,
 	highlightValue: PropTypes.number
 }
