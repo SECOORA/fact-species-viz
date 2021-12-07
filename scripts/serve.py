@@ -56,7 +56,7 @@ async def process_atp_project(project_code: str, year: int, type: ATPType, force
 
 
 @app.post('/atp/PROCESS_DEFAULT')
-async def process_defaults(limit: Optional[str] = None, force: Optional[bool] = None):
+async def process_defaults(type: Optional[ATPType]=None, limit: Optional[str] = None, force: Optional[bool] = None):
     projects = [
         'BLKTP',
         'FSUGG',
@@ -74,10 +74,15 @@ async def process_defaults(limit: Optional[str] = None, force: Optional[bool] = 
 
     years = list(range(2009, 2022))
 
-    types = [
-        ATPType.range,
-        ATPType.distribution
-    ]
+    if type is not None:
+        types = [
+            type
+        ]
+    else:
+        types = [
+            ATPType.range,
+            ATPType.distribution
+        ]
 
     ret = []
 
