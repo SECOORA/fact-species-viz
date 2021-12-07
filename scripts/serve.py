@@ -72,7 +72,7 @@ async def process_defaults(limit: Optional[str] = None, force: Optional[bool] = 
         lprojects = limit.split(",")
         projects = [p for p in projects if p in lprojects]
 
-    years = list(range(2009, 2021))
+    years = list(range(2009, 2022))
 
     types = [
         ATPType.range,
