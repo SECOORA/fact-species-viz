@@ -30,7 +30,7 @@ try:
 except ImportError:
     from .hull import ConcaveHull
     
-from .fetch import get_all_tables
+from .fetch import get_all_tables, get_from_graphql
 from .config import CONFIG
 from .utils import lock
 from .cache import r
@@ -813,7 +813,7 @@ def do_process(trackercode: str, year: str, agg_method: str, summary_method: str
         else:
             print(d)
 
-def process(trackercode: str, year: str, agg_method: str, summary_method: str, month: Optional[int]=None, buffer: Optional[float]=None, simplify: Optional[float]=None, jitter: Optional[float]=None, round_decimals: Optional[int]=None, force: bool=False) -> Sequence[Dict[str, Any]]:
+def process(trackercode: str, year: Optional[str], agg_method: str, summary_method: str, month: Optional[int]=None, buffer: Optional[float]=None, simplify: Optional[float]=None, jitter: Optional[float]=None, round_decimals: Optional[int]=None, force: bool=False) -> Sequence[Dict[str, Any]]:
     agg_callable: Callable[[pd.DataFrame], geopandas.GeoDataFrame] = agg_methods[agg_method]['callable']
     agg_discrim: str = agg_methods[agg_method]['discrim']
 
@@ -821,7 +821,7 @@ def process(trackercode: str, year: str, agg_method: str, summary_method: str, m
     summary_discrim: str = summary_methods[summary_method]['discrim']
     summary_type: str = summary_methods[summary_method]['type']
 
-    df = load_df(trackercode, year, jitter=jitter, round_decimals=round_decimals)
+    df = load_df(trackercode, year, jitter=jitter, round_decimals=round_decimals, ignore_cache=force)
 
     ret_vals: List[Dict[str, Any]] = []
 
@@ -874,7 +874,7 @@ def process(trackercode: str, year: str, agg_method: str, summary_method: str, m
         else:
             print(f"No other cached data for {species_aphia_id}/{year}", file=sys.stderr)
 
-        # load every available year for this species
+        # load every available year for this species (all projects)
         agg_all_data = load_agg_cache(None, species_aphia_id, agg_discrim, skip=[(trackercode, year), *agg_data.keys()])
         if agg_all_data:
             all_years_agg = pd.concat(agg_all_data.values()).set_index(['monthcollected'])
@@ -887,12 +887,34 @@ def process(trackercode: str, year: str, agg_method: str, summary_method: str, m
                 all_years_gdf = pd.concat([all_years_agg, gdf])
 
             agg_trackercodes, agg_years = zip(*agg_all_data.keys())
+            all_agg_years = [*set([year, *agg_years])]
+            all_agg_trackercodes = [*set([trackercode, *agg_trackercodes])]
 
             frames_and_metadata.append(
-                (all_years_gdf, [*set([year, *agg_years])], [*set([trackercode, *agg_trackercodes])])
+                (all_years_gdf, all_agg_years, all_agg_trackercodes)
             )
 
             print(f"Found {len(agg_all_data)} other cached data for {species_aphia_id}/ALL YEARS ({len(set(agg_years))}), projects: {','.join(set(agg_trackercodes))}", file=sys.stderr)
+
+            # now, if there are more than one trackercodes, add all years for just the requested trackercode
+            if False and len(all_agg_trackercodes) > 1:
+                tc_gdfs = [v for (tc, y), v in agg_all_data.items() if tc == trackercode]
+                # there may not be any more data for the requested project!
+                if len(tc_gdfs) > 0:
+                    all_years_agg_project = pd.concat(tc_gdfs)
+                    if agg_data:
+                        all_years_project_gdf = pd.concat([all_years_agg_project, agg_gdf])
+                    else:
+                        all_years_project_gdf = pd.concat([all_years_agg_project, gdf])
+
+                    frames_and_metadata.append(
+                        (all_years_project_gdf, [y for (tc, y) in agg_all_data.keys()], [trackercode])
+                    )
+
+                    print(f"Added {len(tc_gdfs)} {trackercode} specific all years")
+                else:
+                    print(f"No additional years available for {trackercode} ({year})")
+
         else:
             print(f"No other cached data for {species_aphia_id}/ALL YEARS", file=sys.stderr)
 
@@ -989,7 +1011,7 @@ def process(trackercode: str, year: str, agg_method: str, summary_method: str, m
     return ret_vals
 
 
-def load_df(trackercode: str, year: str, trim: bool=True, jitter: Optional[float]=None, round_decimals: Optional[int]=None, extra_cols: Optional[List[str]]=None) -> geopandas.GeoSeries:
+def load_df(trackercode: str, year: str, trim: bool=True, jitter: Optional[float]=None, round_decimals: Optional[int]=None, extra_cols: Optional[List[str]]=None, ignore_cache: bool=False) -> geopandas.GeoSeries:
     kwargs = {
         'parse_dates': ['datelastmodified', 'datecollected']
     } 
@@ -1003,21 +1025,25 @@ def load_df(trackercode: str, year: str, trim: bool=True, jitter: Optional[float
     need = True
     p = Path(CONFIG.data_dir) / Path(f"{trackercode}_{year}.csv")
     with lock(r, str(p)):
-        if p.exists():
-            # verify they have the species
-            try:
-                sdf = pd.read_csv(p, nrows=2, **kwargs)
-                if 'aphiaid' in sdf.columns:
-                    need = False
-            except ValueError as e:
-                if not "columns expected but not found" in str(e):
-                    raise
+        if ignore_cache:
+            print("load_df: ignore_cache flag set, pulling from source")
+        else:
+            if p.exists():
+                # verify they have the species
+                try:
+                    sdf = pd.read_csv(p, nrows=2, **kwargs)
+                    if 'aphiaid' in sdf.columns:
+                        need = False
+                except ValueError as e:
+                    if not "columns expected but not found" in str(e):
+                        raise
 
-            if need:
-                print(f"load_df({trackercode},{year}): no species info, re-loading from db", file=sys.stderr)
+                if need:
+                    print(f"load_df({trackercode},{year}): no species info, re-loading from source", file=sys.stderr)
 
         if need:
-            get_all_tables(trackercode=trackercode, year=year, path=str(p))
+            get_from_graphql(trackercode=trackercode, year=year, path=str(p))
+            # get_all_tables(trackercode=trackercode, year=year, path=str(p))
 
     assert p.exists()
 

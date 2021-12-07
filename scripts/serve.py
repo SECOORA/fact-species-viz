@@ -21,11 +21,12 @@ app.add_middleware(
 
 
 @app.post('/atp/{project_code}/{type}/{year}')
-async def process_atp_project(project_code: str, year: int, type: ATPType):
+async def process_atp_project(project_code: str, year: int, type: ATPType, force: Optional[bool]=None):
     kwargs = {
         'project_code': project_code,
         'year': year,
-        'type': type.value
+        'type': type.value,
+        'force': force or False
     }
 
     if type == ATPType.all:
@@ -55,7 +56,7 @@ async def process_atp_project(project_code: str, year: int, type: ATPType):
 
 
 @app.post('/atp/PROCESS_DEFAULT')
-async def process_defaults(limit: Optional[str] = None):
+async def process_defaults(limit: Optional[str] = None, force: Optional[bool] = None):
     projects = [
         'BLKTP',
         'FSUGG',
@@ -86,7 +87,8 @@ async def process_defaults(limit: Optional[str] = None):
                 kwargs = {
                     'project_code': p,
                     'year': y,
-                    'type': t.value
+                    'type': t.value,
+                    'force': force or False
                 }
 
                 tasks.run_atp_process.apply_async(kwargs=kwargs)

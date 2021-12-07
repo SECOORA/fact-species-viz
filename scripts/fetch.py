@@ -1,9 +1,13 @@
+import re
 import sys
+from io import BytesIO
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
+from zipfile import ZipFile
 
 import click
 import pandas as pd
+import requests
 from environs import Env
 from jinjasql import JinjaSql
 from sqlalchemy import create_engine
@@ -11,6 +15,7 @@ from sqlalchemy.engine import Engine
 from tqdm import tqdm
 
 from .log import logger
+from .config import CONFIG
 
 
 class NoDataException(Exception):
@@ -39,8 +44,9 @@ def get_conn() -> Engine:
 
 
 def get_df(conn: Engine, table_name: str, trackercode: str) -> pd.DataFrame:
-
-
+    """
+    Don't use this.  big query.
+    """
     df = pd.read_sql_query(
         f"SELECT fieldnumber, latitude, longitude, datecollected, monthcollected FROM obis.{table_name} WHERE trackercode='{trackercode}'",
         conn,
@@ -51,13 +57,17 @@ def get_df(conn: Engine, table_name: str, trackercode: str) -> pd.DataFrame:
 
 
 def get_df_with_species(conn: Engine, table_name: str, trackercode: str, bin_size: int=10000) -> pd.DataFrame:
-    # template = """
-    #     SELECT t1.fieldnumber, t1.latitude, t1.longitude, t1.datecollected, t1.monthcollected, t1.relatedcatalogitem, t2.scientificname, t2.commonname, t3.aphiaidaccepted AS aphiaid
-    #     FROM obis.{{ table_name|sqlsafe }} t1
-    #     LEFT JOIN obis.otn_animals t2 ON t1.relatedcatalogitem = t2.catalognumber
-    #     LEFT JOIN obis.scientificnames t3 ON t2.scientificname = t3.scientificname
-    #     WHERE trackercode={{ trackercode }}
-    # """
+    """
+    Gets dataframe from OTN database with species information attached inline.
+    """
+    df = get_chunked_df(conn, table_name, trackercode, bin_size=bin_size)
+    df = get_species_for_df(conn, df)
+
+
+def get_chunked_df(conn: Engine, table_name: str, trackercode: str, bin_size: int=10000) -> pd.DataFrame:
+    """
+    Gets dataframe from database with chunked queries, no species information.
+    """
     template = """
         SELECT COUNT(t1.*)
         FROM obis.{{ table_name|sqlsafe }} t1
@@ -111,11 +121,18 @@ def get_df_with_species(conn: Engine, table_name: str, trackercode: str, bin_siz
         raise NoDataException(f"No data found for {table_name}/{trackercode}")
 
     df = pd.concat(frames)
+    return df
+
+
+def get_species_for_df(df: pd.DataFrame, catalog_col: str='relatedcatalogitem', conn: Optional[Engine]=None, merge_kwargs: Optional[Dict[Any, Any]]=None) -> pd.DataFrame:
+    if not conn:
+        conn = get_conn()
 
     # join with species info
-    relcatalogitems = list(df['relatedcatalogitem'].unique())
-    logger.info("get_df_with_species: %d unique animals", len(relcatalogitems))
+    relcatalogitems = list(df[catalog_col].unique())
+    logger.info("get_species_for_df: %d unique animals", len(relcatalogitems))
 
+    j = JinjaSql(param_style='pyformat')
     template = """
         SELECT t2.catalognumber, t2.scientificname, t2.commonname, t3.aphiaidaccepted AS aphiaid
         FROM obis.otn_animals t2
@@ -136,8 +153,94 @@ def get_df_with_species(conn: Engine, table_name: str, trackercode: str, bin_siz
     ).drop_duplicates()     # otn_animals has multiple entries for each catalog item with notes (i guess?), we only select columns that should be the same
 
     # merge species info with detections
-    merged_df = pd.merge(df, species_df, left_on='relatedcatalogitem', right_on='catalognumber').drop(columns=['relatedcatalogitem', 'catalognumber'])
+    merged_df = pd.merge(df, species_df, left_on=catalog_col, right_on='catalognumber',
+                         **merge_kwargs).drop(columns=[catalog_col, 'catalognumber'])
     return merged_df
+
+
+def get_from_graphql(trackercode: str, year: str, path: str):
+    assert CONFIG.rw_auth_token != "you_must_set"
+
+    logger.info("get_from_graphql: retrieving list of detection zips")
+    query = """
+    {
+        organization(id: 2563073) {
+            name,
+            files(folderName: "Your tag detections"){
+                nodes {
+                    id,
+                    name,
+                    project {
+                        name
+                    }
+                }
+            }
+        }
+    }
+    """
+
+    r = requests.post(
+        CONFIG.rw_gql_url,
+        json={
+            'operationName': None,
+            'query': query,
+            'variables': {}
+        },
+        headers={
+            'Authorization': f'Bearer {CONFIG.rw_auth_token}'
+        }
+    )
+
+    r.raise_for_status()
+
+    rproject = re.compile(f'^{trackercode}\\W')
+    all_nodes = r.json()['data']['organization']['files']['nodes']
+    nodes = [d for d in all_nodes if \
+             d['name'].endswith(f"{year}.zip") and rproject.match(d['project']['name'])]
+
+    urls = [f"https://researchworkspace.com/files/{n['id']}/{n['name']}" for n in nodes]
+    url = urls[0]
+
+    logger.info("get_from_graphql: retrieving %s", nodes[0]['name'])
+
+    r = requests.get(url, headers={
+        'api-key': CONFIG.rw_auth_token
+    })
+    r.raise_for_status()
+
+    zf = ZipFile(BytesIO(r.content))
+    csv_names = [f for f in zf.namelist() if f.endswith('.csv')]
+    assert len(csv_names) == 1, f"Didn't find only one CSV in zip file {len(csv_names)}"
+
+    df = pd.read_csv(BytesIO(zf.read(csv_names[0])), parse_dates=['datecollected', 'datelastmodified'])
+
+    # cleanup dataframe
+    df = df.rename(
+        columns={
+            'tagname': 'fieldnumber'
+        }
+    )
+
+    # get species info, attach to df
+    df = get_species_for_df(df, catalog_col="catalognumber", merge_kwargs={'suffixes': [None, '_y']})
+
+    # filter for the year requested, due to some noise noticed in BLKTP
+    df = df[df['yearcollected'] == int(year)]
+
+    # subset to needed columns
+    df = df[
+        ['fieldnumber',
+        'latitude',
+        'longitude',
+        'datecollected',
+        'monthcollected',
+        'scientificname',
+        'commonname',
+        'aphiaid']
+    ]
+    df.to_csv(path)
+
+    return df
 
 
 @click.group()

@@ -18,7 +18,7 @@ app = Celery('atp', broker=CONFIG.redis_celery_dsn)
 
 
 @app.task
-def run_atp_process(project_code: str, year: int, type: ATPType, month: Optional[int] = None):
+def run_atp_process(project_code: str, year: int, type: ATPType, month: Optional[int] = None, force: bool=False):
     agg_method: str
     summary_method: str
     # extra_kwargs: Dict[str, Any] = {}
@@ -55,6 +55,7 @@ def run_atp_process(project_code: str, year: int, type: ATPType, month: Optional
         summary_method,
         round_decimals=1,
         **month_arg,
+        force=force,
     )
 
     ret_val = set()       # type, species, year

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
 """Configuration."""
-from pydantic import BaseSettings, Field, RedisDsn
+from pydantic import BaseSettings, Field, HttpUrl, RedisDsn
 
 
 class Configuration(BaseSettings):
@@ -10,6 +10,9 @@ class Configuration(BaseSettings):
     redis_celery_dsn: RedisDsn = 'redis://:atp@redis:6379/0'
 
     data_dir: str = "cache"
+
+    rw_gql_url: HttpUrl = 'https://gql.researchworkspace.com/graphql'
+    rw_auth_token: str = 'you_must_set'
 
     class Config:
         """Configuration meta class."""
