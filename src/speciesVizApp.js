@@ -266,7 +266,7 @@ function SpeciesVizApp(props) {
         className={"glmap-popup"}
       >
         <div className="tw-flex tw-flex-col">
-          <div className="tw-text-sm">{hoverData.lat.toFixed(3)}, {hoverData.lon.toFixed(3)}</div>
+          <div className="tw-text-sm">{hoverData.lat.toFixed(1)}, {hoverData.lon.toFixed(1)}</div>
 
           <div>
             {selLayers.map((l, i) => {
