@@ -245,7 +245,7 @@ def build_vis_graph(filename: str=None) -> vg.VisGraph:
         )
 
     g = vg.VisGraph()
-    g.build(polys, workers=4)
+    g.build(polys, workers=1)
 
     g.save(str(saved))
     return g
