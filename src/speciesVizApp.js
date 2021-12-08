@@ -14,7 +14,6 @@ import Palettes from "./palettes.js";
 import PaletteSwatch from "./paletteSwatch.js";
 import {IconPlus} from "./icon.js";
 
-import imgFactLogo from './assets/img/fact_logo.jpg';
 import { Popup } from "react-map-gl";
 import { objectTypeAnnotation } from "@babel/types";
 
@@ -422,9 +421,17 @@ function SpeciesVizApp(props) {
 
       <div className="tw-bg-gray-300 tw-border-b tw-border-gray-600 tw-text-sm tw-py-2 tw-px-2 tw-relative">
         <div className="tw-flex">
-          <img className="tw-w-16 tw-absolute tw-bottom-0 tw-mb-2 tw-border tw-border-gray-300 tw-rounded-md tw-shadow tw-cursor-pointer" src={imgFactLogo} alt="FACT Logo" onClick={() => setReadOnly(!readOnly)}/>
+          <img
+            className="tw-w-16 tw-absolute tw-bottom-0 tw-mb-2 tw-border tw-border-gray-300 tw-rounded-md tw-shadow tw-cursor-pointer"
+            src="https://secoora.org/wp-content/uploads/2017/06/fact_logo.jpg"
+            alt="FACT Logo"
+            onClick={() => setReadOnly(!readOnly)}
+          />
           <div className="tw-ml-16 tw-mr-4">
-            <span className="tw-ml-2 tw-font-bold">FACT DaViT</span> &middot; <a href="https://secoora.org/fact/" target="_blank">https://secoora.org/fact/</a>
+            <span className="tw-ml-2 tw-font-bold">FACT DaViT</span> &middot;{" "}
+            <a href="https://secoora.org/fact/" target="_blank">
+              https://secoora.org/fact/
+            </a>
           </div>
           {shownProjectCodes.length > 0 && (
             <div
