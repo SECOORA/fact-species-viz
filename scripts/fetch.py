@@ -6,9 +6,11 @@ from typing import Any, Dict, List, Optional
 from zipfile import ZipFile
 
 import click
+import geopandas as gpd
 import pandas as pd
 import requests
 from environs import Env
+from geopandas.tools import clip
 from jinjasql import JinjaSql
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
@@ -213,6 +215,18 @@ def get_from_graphql(trackercode: str, year: str, path: str):
     assert len(csv_names) == 1, f"Didn't find only one CSV in zip file {len(csv_names)}"
 
     df = pd.read_csv(BytesIO(zf.read(csv_names[0])), parse_dates=['datecollected', 'datelastmodified'])
+
+    df = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df.longitude, df.latitude))
+
+    # filter for allowed area (custom poly)
+    len_before = len(df)
+    logger.info("get_from_graphql: clipping, length before %d", len_before)
+
+    allowed_area = gpd.read_file("data/allowed_area.geojson", driver="GeoJSON")
+    df = clip(df, allowed_area)
+
+    len_after = len(df)
+    logger.info("get_from_graphql: clipping finished, length after %d (-%d)", len_after, len_before - len_after)
 
     # cleanup dataframe
     df = df.rename(
