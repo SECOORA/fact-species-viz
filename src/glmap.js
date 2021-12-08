@@ -1,10 +1,17 @@
 import React, { useState, useEffect, useRef } from "react";
-import ReactMapGL, {Source, Layer, Popup, LinearInterpolator, WebMercatorViewport, NavigationControl } from 'react-map-gl';
+import ReactMapGL, {Source, Layer, Popup, LinearInterpolator, WebMercatorViewport, NavigationControl, ScaleControl } from 'react-map-gl';
 import AutoSizer from 'react-virtualized/dist/commonjs/AutoSizer';
 import * as d3 from 'd3';
 import bbox from "@turf/bbox";
 
 import * as mapstyle from './mapstyle.json';
+
+const scaleControlStyle = {
+  left: 70,
+  bottom: 5,
+};
+
+const scaleUnits = ['metric', 'imperial', 'nautical'];
 
 function GLMap(props) {
   const idField = props.idField || "id";
@@ -24,6 +31,7 @@ function GLMap(props) {
   const [allBBox, setAllBBox] = useState(null);
   const [noData, setNoData] = useState(false);
   const [noDataReason, setNoDataReason] = useState(null);
+  const [scaleUnit, setScaleUnits] = useState(scaleUnits[1]);
 
   const onAutoResize = (e) => {
     setViewport({
@@ -123,18 +131,6 @@ function GLMap(props) {
     }
   }
 
-    //   const newAllBBox = bbox(allFeatures);
-
-    //   setStyles(newStyles);
-    //   setLayerData(data);
-    //   setAllBBox(newAllBBox);
-    //   // zoomToExtents(newAllBBox);
-    // }).catch(e => {
-    //   setNoData(true);
-    //   setNoDataReason(e.toString());
-    //   setLayerData({});   // remove any previous layer data
-    //   setAllBBox(null);
-
   // TODO: useEffect on layerData changes to calculate allbbox
   // TODO: allBbox should be a memo calc on layerData
 
@@ -152,7 +148,6 @@ function GLMap(props) {
               }
               onHover={onMapHover}
               // onClick={onMapHover}
-
               onViewportChange={setViewport}
               mapboxApiAccessToken={process.env.MAPBOX_TOKEN}
             >
@@ -161,13 +156,44 @@ function GLMap(props) {
               </div> */}
 
               {/* static layers for reliable z-indexing (max 5) */}
-              <Layer id="z-0" type="background" layout={{ visibility: 'none'}} paint={{}} />
-              <Layer id="z-1" type="background" layout={{ visibility: 'none'}} paint={{}} />
-              <Layer id="z-2" type="background" layout={{ visibility: 'none'}} paint={{}} />
-              <Layer id="z-3" type="background" layout={{ visibility: 'none'}} paint={{}} />
-              <Layer id="z-4" type="background" layout={{ visibility: 'none'}} paint={{}} />
+              <Layer
+                id="z-0"
+                type="background"
+                layout={{ visibility: "none" }}
+                paint={{}}
+              />
+              <Layer
+                id="z-1"
+                type="background"
+                layout={{ visibility: "none" }}
+                paint={{}}
+              />
+              <Layer
+                id="z-2"
+                type="background"
+                layout={{ visibility: "none" }}
+                paint={{}}
+              />
+              <Layer
+                id="z-3"
+                type="background"
+                layout={{ visibility: "none" }}
+                paint={{}}
+              />
+              <Layer
+                id="z-4"
+                type="background"
+                layout={{ visibility: "none" }}
+                paint={{}}
+              />
 
               {props.children}
+
+              <ScaleControl
+                maxWidth={100}
+                unit={scaleUnit}
+                style={scaleControlStyle}
+              />
 
             </ReactMapGL>
           )}
