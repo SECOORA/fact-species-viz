@@ -16,6 +16,16 @@
   margin-bottom: 45px;
 }
 
+#app.full-bleed {
+  position: relative;
+  z-index: 999;
+  width: calc(100vw - 40px);
+  left: 50%;
+  margin-left: -50vw;
+  right: 50%;
+  margin-right: -50vw;
+}
+
 #app .mapboxgl-popup-tip {
   border-top-color: rgba(0, 0, 0, 0);
   border-right-color: rgba(0, 0, 0, 0);
