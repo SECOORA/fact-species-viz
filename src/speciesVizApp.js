@@ -12,6 +12,7 @@ import LayerEditor from "./layerEditor.js";
 import Legend from "./legend.js";
 import Palettes from "./palettes.js";
 import PaletteSwatch from "./paletteSwatch.js";
+import BaseStyles from "./baseStyles.js";
 import {IconPlus} from "./icon.js";
 
 import { Popup } from "react-map-gl";
@@ -30,6 +31,7 @@ function SpeciesVizApp(props) {
     location = useLocation(),
     history = useHistory();
 
+  const [basemapStyle, setBasemapStyle] = useState('greyscale');
   const [dataInventory, setDataInventory] = useState([]);
   const [citations, setCitations] = useState({}); // project code -> {shortname, citation, website}
   const [maxLevels, setMaxLevels] = useState({}); // layerKey -> maximum
@@ -341,8 +343,7 @@ function SpeciesVizApp(props) {
       <div className="tw-flex">
         <GLMap
           idField="key"
-          mapStyle="mapbox://styles/mz4/ck6m8v8x9052n1iphvif4ilra"
-          // mapStyle="mapbox://styles/mz4/ck6kzovim17x91iqv3rv1h7u4"
+          mapStyle={BaseStyles[basemapStyle]}
           mapHeight={700}
           mapWidth={700}
           maxZoom={4}
