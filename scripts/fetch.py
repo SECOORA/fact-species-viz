@@ -216,7 +216,7 @@ def get_from_graphql(trackercode: str, year: str, path: str):
 
     df = pd.read_csv(BytesIO(zf.read(csv_names[0])), parse_dates=['datecollected', 'datelastmodified'])
 
-    df = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df.longitude, df.latitude))
+    df = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df.longitude, df.latitude), crs='EPSG:4326')
 
     # filter for allowed area (custom poly)
     len_before = len(df)
