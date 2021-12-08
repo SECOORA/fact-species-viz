@@ -136,7 +136,7 @@ def get_interp_line(lon_start: float, lat_start: float, lon_end: float, lat_end:
     raise ValueError(f"Unknown method ({method}) for get_interp_line")
 
 
-def animal_interpolated_paths(df: pd.DataFrame, interp_method: str="simple", max_day_gap: int=15) -> geopandas.GeoDataFrame:
+def animal_interpolated_paths(df: pd.DataFrame, interp_method: str="visgraph", max_day_gap: int=15) -> geopandas.GeoDataFrame:
     """
     For each animal, interpolate the path between detections (daily).
     """
