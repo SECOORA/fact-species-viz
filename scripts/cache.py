@@ -2,11 +2,13 @@ import json
 from collections import defaultdict
 from functools import cmp_to_key
 from json.decoder import JSONDecodeError
-from typing import Any, Dict, Optional, Mapping, Sequence, Union
+from typing import Any, Callable, Dict, Optional, Mapping, Sequence, Set, Union
 
 from redis import Redis
 
 from .config import CONFIG
+from .log import logger
+from .utils import ATPType, get_atp_cache_key
 
 
 r = Redis.from_url(str(CONFIG.redis_cache_dsn))
@@ -199,7 +201,7 @@ def update_citations(project_code: str, shortname: str, citation: str, website: 
     """
     r.hset(f"citations:{project_code}", 'shortname', shortname)
     r.hset(f"citations:{project_code}", 'citation', citation)
-    r.hset(f"citations:{project_code}", 'website', website)
+    r.hset(f"citations:{project_code}", 'website', website or '')
 
 
 def get_citations():
@@ -219,3 +221,47 @@ def get_citations():
         }
 
     return ret
+
+
+def cache_results(results: Sequence[Dict[str, Any]], dtype: ATPType) -> Set:
+    """
+    Stores the results of a process* operation in cache.
+
+    Returns set of (type, species, year) tuples.
+    """
+    ret_val = set()       # type, species, year
+
+    # store in cache
+    for d in results:
+        if 'type' in d['_metadata']:
+            assert dtype == d['_metadata']['type']
+            del d['_metadata']['type']
+
+        ck = get_atp_cache_key('data', **d['_metadata'], type=dtype)
+
+        ret_val.add((dtype, str(d['_metadata'].get('species_aphia_id')), str(
+            d['_metadata'].get('year'))))
+
+        # update species info
+        species_aphia_id = d['_metadata'].get('species_aphia_id')
+        species_common_name = d['_metadata'].get('species_common_name')
+        species_scientific_name = d['_metadata'].get('species_scientific_name')
+
+        update_species_common_name(species_aphia_id, species_common_name)
+        update_species_scientific_name(
+            species_aphia_id, species_scientific_name)
+
+        if d['_metadata']['project_code'] != '_ALL':
+            update_citations(
+                d['_metadata']['project_code'],
+                d['_metadata']['shortname'],
+                d['_metadata']['citation'],
+                d['_metadata']['website']
+            )
+
+        del d['_metadata']
+
+        written = write_cache(ck, d)
+        logger.info("Cached %s (%d)", ck, written)
+
+    return ret_val

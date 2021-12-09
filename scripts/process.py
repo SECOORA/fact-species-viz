@@ -328,7 +328,7 @@ def _match_with_grid(animal_gdf: geopandas.GeoDataFrame, bounds, resolution: int
     @param 
     # gdf is geopandas dataframe wrapped around shapely geometry for each animal,
     """
-    print("    Building grid", file=sys.stderr)
+    tqdm.write("Building grid")
     s_grid, _ = make_gridsquares(bounds, resolution=resolution)
 
     def project_counts(s: pd.Series) -> pd.Series:
@@ -339,10 +339,10 @@ def _match_with_grid(animal_gdf: geopandas.GeoDataFrame, bounds, resolution: int
         return s['project_code'].value_counts().to_frame('count').T
 
     # join the grid squares with the animal geometry
-    print("    Joining animal tracks with grid", file=sys.stderr)
+    tqdm.write("Joining animal tracks with grid")
     grouped = geopandas.sjoin(animal_gdf, s_grid).groupby('index_right')
 
-    print("    Calculating counts", file=sys.stderr)
+    tqdm.write("Calculating counts")
     match_counts = grouped.apply(project_counts)
     match_counts.reset_index(1, drop=True, inplace=True)    # remove the 'count' index
     match_counts['counts'] = match_counts.sum(axis=1)
@@ -667,14 +667,14 @@ def summary_distribution(gdf: geopandas.GeoDataFrame, bounds=None, range_low: fl
     all_gdf = geopandas.GeoDataFrame(all_interp_animals, geometry='geometry', crs='EPSG:4326')
 
     # make a grid, join them
-    print("Gridding and matching animal tracks", file=sys.stderr)
+    tqdm.write("Gridding and matching animal tracks")
     matched_gdf = _match_with_grid(all_gdf, bounds, resolution=10)
 
     # transform to points
     matched_gdf.geometry = matched_gdf.geometry.apply(lambda x: x.centroid)
 
     # build contour polygons
-    print("Building contour polygons", file=sys.stderr)
+    tqdm.write("Building contour polygons")
     level_count = int(matched_gdf['counts'].max())
 
     if level_count > 30:
@@ -692,7 +692,7 @@ def summary_distribution(gdf: geopandas.GeoDataFrame, bounds=None, range_low: fl
     )
 
     # smooth polygons out
-    print("Smoothing contour polygons", file=sys.stderr)
+    tqdm.write("Smoothing contour polygons")
     smoothed = [smooth_polygon(cpoly) for cpoly in contour_polys]
 
     ret = geopandas.GeoDataFrame.from_features(smoothed, crs=all_gdf.crs)
@@ -852,161 +852,174 @@ def process(trackercode: str, year: Optional[str], agg_method: str, summary_meth
                 print(f"> caching {str(cache_path)}", file=sys.stderr)
 
         assert gdf is not None
-        range_low = -math.inf
-        range_high = math.inf
 
-        frames_and_metadata = [
-            (gdf, year, [trackercode])
-        ]
+        def get_cache_metadata(**kwargs):
+            return {
+                'project_code': trackercode,
+                'species_common_name': species_common_name,
+                'species_scientific_name': species_scientific_name,
+                'species_aphia_id': species_aphia_id,
+                'year': str(year),
+                'type': summary_type,
+                **get_project_metadata(trackercode),
+                **kwargs,
+            }
 
-        # load other agg cached datasets of the same species
-        agg_data = load_agg_cache(year, species_aphia_id, agg_discrim, skip=[(trackercode, year)])
-        if agg_data:
-            all_agg = pd.concat(agg_data.values()).set_index(['monthcollected'])
-            agg_gdf = pd.concat([gdf, all_agg])
-            agg_trackercodes, agg_years = zip(*agg_data.keys())
+        def get_feature_metadata(**kwargs):
+            return {
+                'project_codes': trackercode,
+                'project_years': str(year),
+                'species_common_name': species_common_name,
+                'species_scientific_name': species_scientific_name,
+                'species_aphia_id': species_aphia_id,
+                **kwargs
+            }
 
-            print(f"Found {len(agg_data)} other cached data for {species_aphia_id}/{year}, projects: {','.join(agg_trackercodes)}", file=sys.stderr)
+        ret_vals.extend(
+            _process_dataframe(gdf, summary_callable, get_cache_metadata, get_feature_metadata, buffer=buffer, simplify=simplify)
+        )
 
-            frames_and_metadata.append(
-                (agg_gdf, year, [trackercode, *agg_trackercodes])
+    return ret_vals
+
+
+def process_all(species_aphia_id: int, year: Optional[str], agg_method: Optional[str], summary_method: str, buffer: Optional[float]=None, simplify: Optional[float]=None, trackercode: Optional[str]=None) -> Sequence[Dict[str, Any]]:
+    """
+    Processes any "All" layers (all projects contributing to a species for a year, all projects contributing to a species for all years).
+
+    Can process all years for a single project if a trackercode= kwarg is passed.
+    """
+    agg_discrim = agg_methods[agg_method]['discrim']
+
+    summary_callable: Callable[[geopandas.GeoDataFrame], BaseGeometry] = summary_methods[summary_method]['callable']
+    summary_discrim: str = summary_methods[summary_method]['discrim']
+    summary_type: str = summary_methods[summary_method]['type']
+
+    ret_vals: List[Dict[str, Any]] = []
+
+    # load source data: all source data in this step is from load_agg_cache
+    agg_data = load_agg_cache(year, species_aphia_id, agg_discrim)
+
+    # filter agg_data to only the project requested
+    if trackercode is not None:
+        agg_data = {(pc, y): adf for (pc, y), adf in agg_data.items() if pc == trackercode}
+
+    if not agg_data:
+        print(f"No cached data for {species_aphia_id}/{year}", file=sys.stderr)
+
+    all_agg = pd.concat(agg_data.values()).set_index(['monthcollected'])
+    agg_trackercodes, agg_years = zip(*agg_data.keys())
+    agg_trackercodes = sorted(set(agg_trackercodes))
+    agg_years = sorted(set(agg_years))
+
+    print(f"Found {len(agg_data)} cached data for {species_aphia_id}/{year}, years: {','.join(agg_years)} projects: {','.join(agg_trackercodes)}", file=sys.stderr)
+
+    # pull out species details from dataframe
+    species_common_name = all_agg['commonname'].iloc[0]
+    species_scientific_name = all_agg['scientificname'].iloc[0]
+
+    def get_metadata(**kwargs):
+        all_ffname = {
+            'project_code': trackercode or '_ALL',     # we're doing the ALL layer here, unless specificially requested to do a specific year
+            'species_common_name': species_common_name,
+            'species_scientific_name': species_scientific_name,
+            'species_aphia_id': species_aphia_id,
+            'year': year or "all",      # if year is None this is the all for that year
+            'type': summary_type,
+            **kwargs,
+            **get_multiple_metadata(agg_trackercodes)       # will join all metadata by newlines for every project
+        }
+        return all_ffname
+
+    def get_feature_metadata(**kwargs):
+        return {
+            'project_codes': ", ".join(agg_trackercodes),
+            'project_years': ", ".join(agg_years),
+            'species_common_name': species_common_name,
+            'species_scientific_name': species_scientific_name,
+            'species_aphia_id': species_aphia_id,
+            **kwargs
+        }
+
+    ret_vals = _process_dataframe(
+        all_agg,
+        summary_callable,
+        get_metadata,
+        get_feature_metadata,
+    )
+    return ret_vals
+
+
+def _process_dataframe(
+    gdf: geopandas.GeoDataFrame,
+    summary_callable: Callable,
+    get_cache_metadata: Callable,
+    get_feature_metadata: Callable,
+    buffer: Optional[float] = None,
+    simplify: Optional[float] = None
+) -> Sequence[Dict[str, Any]]:
+    """
+    Runs the given dataframe through the summary method and creates a geojson representation.
+
+    Iterates through all seen months (the index of the gdf) as well as the all months and summarizes
+    each one.
+
+    @param  gdf                     The geodataframe of animal positions to summarize.
+    @param  summary_callable        The summary method to call.
+    @param  get_cache_metadata      Callable which returns metadata to accompany each geojson feature,
+                                    used to determine parameters of what built summary and how to save
+                                    it.
+    @param  get_feature_metadata    Callable which returns metadata to exist in properties of each
+                                    geojson feature.
+    @param  buffer                  Optionally buffer the summary results.
+    @param  simplify                Optionally simplify the summary results.
+    """
+    ret_vals: List[Dict[str, Any]] = []
+
+    # initialize ranges
+    range_low = -math.inf
+    range_high = math.inf
+
+    # for each month:
+    for imonth in tqdm([slice(None), *gdf.index.unique()], desc="Processing months"):
+        is_all_months = isinstance(imonth, slice)
+
+        ffname = get_cache_metadata(**{'month': "all" if is_all_months else str(imonth)})
+
+        month_df = gdf.loc[imonth]
+        if isinstance(month_df, (pd.Series, geopandas.GeoSeries)):
+            month_df = gdf.loc[[imonth]]    # https://stackoverflow.com/a/20384317
+
+        try:
+            summary = summary_callable(month_df,
+                bounds=gdf.unary_union.bounds,
+                range_low=range_low,
+                range_high=range_high,
             )
-        else:
-            print(f"No other cached data for {species_aphia_id}/{year}", file=sys.stderr)
 
-        # load every available year for this species (all projects)
-        agg_all_data = load_agg_cache(None, species_aphia_id, agg_discrim, skip=[(trackercode, year), *agg_data.keys()])
-        if agg_all_data:
-            all_years_agg = pd.concat(agg_all_data.values()).set_index(['monthcollected'])
+            # add metadata about project, species
+            for field, value in get_feature_metadata(project_month=ffname['month']).items():
+                summary[field] = value
 
-            if agg_data:
-                # did we load other project/same year? if so, append that one year's full projects aggregate with this new one
-                all_years_gdf = pd.concat([all_years_agg, agg_gdf])
-            else:
-                # append new one with this project/year only
-                all_years_gdf = pd.concat([all_years_agg, gdf])
-
-            agg_trackercodes, agg_years = zip(*agg_all_data.keys())
-            all_agg_years = [*set([year, *agg_years])]
-            all_agg_trackercodes = [*set([trackercode, *agg_trackercodes])]
-
-            frames_and_metadata.append(
-                (all_years_gdf, all_agg_years, all_agg_trackercodes)
-            )
-
-            print(f"Found {len(agg_all_data)} other cached data for {species_aphia_id}/ALL YEARS ({len(set(agg_years))}), projects: {','.join(set(agg_trackercodes))}", file=sys.stderr)
-
-            # now, if there are more than one trackercodes, add all years for just the requested trackercode
-            if False and len(all_agg_trackercodes) > 1:
-                tc_gdfs = [v for (tc, y), v in agg_all_data.items() if tc == trackercode]
-                # there may not be any more data for the requested project!
-                if len(tc_gdfs) > 0:
-                    all_years_agg_project = pd.concat(tc_gdfs)
-                    if agg_data:
-                        all_years_project_gdf = pd.concat([all_years_agg_project, agg_gdf])
-                    else:
-                        all_years_project_gdf = pd.concat([all_years_agg_project, gdf])
-
-                    frames_and_metadata.append(
-                        (all_years_project_gdf, [y for (tc, y) in agg_all_data.keys()], [trackercode])
-                    )
-
-                    print(f"Added {len(tc_gdfs)} {trackercode} specific all years")
-                else:
-                    print(f"No additional years available for {trackercode} ({year})")
-
-        else:
-            print(f"No other cached data for {species_aphia_id}/ALL YEARS", file=sys.stderr)
-
-        for cur_df, cur_year, cur_metadata in frames_and_metadata:
-            is_all_year = isinstance(cur_year, list)
-            has_multiple = len(cur_metadata) > 1        # frame was created from multiple tracker projects
-
-            # for each month:
-            for imonth in [slice(None), *cur_df.index.unique()]:
-                is_all = isinstance(imonth, slice)
-
-                if not is_all and (month and imonth != month):
-                    continue
-
-                ffname = {
-                    'project_code': '_ALL' if len(cur_metadata) > 1 else cur_metadata[0],
-                    'species_common_name': species_common_name,
-                    'species_scientific_name': species_scientific_name,
-                    'species_aphia_id': species_aphia_id,
-                    'year': "all" if is_all_year else str(year),
-                    'month': "all" if is_all else str(imonth),
-                    'type': summary_type,
-                    **get_multiple_metadata(cur_metadata)       # will join all metadata by newlines for every project
-                    # file_discriminant,
-                    # summary_discrim
-                }
-
-                month_df = cur_df.loc[imonth]
-                if isinstance(month_df, (pd.Series, geopandas.GeoSeries)):
-                    month_df = cur_df.loc[[imonth]]    # https://stackoverflow.com/a/20384317
-
+            # if this is the entire year(s), find the range (distribution only)
+            if is_all_months:
                 try:
-                    summary = summary_callable(month_df,
-                        bounds=cur_df.unary_union.bounds,
-                        range_low=range_low,
-                        range_high=range_high,
-                    )
+                    range_low = max(range_low, summary['level'].min())
+                    range_high = min(range_high, summary['level'].max())
+                except:
+                    pass
 
-                    # add metadata about project, species
-                    summary['project_codes'] = ", ".join(cur_metadata)
-                    summary['species_common_name'] = species_common_name
-                    summary['species_scientific_name'] = species_scientific_name
-                    summary['species_aphia_id'] = species_aphia_id
-                    # @TODO: add metadata per polygon?
+            if buffer:
+                summary = summary.buffer(buffer)
 
-                    # if this is the "all", find the range (distribution only)
-                    if is_all:
-                        try:
-                            range_low = max(range_low, summary['level'].min())
-                            range_high = min(range_high, summary['level'].max())
-                        except:
-                            pass
+            if simplify:
+                summary = summary.simplify(simplify)
 
-                    if buffer:
-                        summary = summary.buffer(buffer)
+            ret_vals.append(to_geojson(summary, **ffname))
 
-                    if simplify:
-                        summary = summary.simplify(simplify)
+        except Exception as e:
+            print("EXCEPT", imonth, e, file=sys.stderr)
 
-                    ret_vals.append(to_geojson(summary, **ffname))
-
-                    # if we DON't have multiple projects feeding the species, that means this one project is also the all layer.
-                    # rather than compute it again, just return a copy with the project_code metadata changed to _ALL.
-                    if not has_multiple:
-                        ret_vals.append(
-                            to_geojson(
-                                summary,
-                                **{
-                                    **ffname,
-                                    'project_code': '_ALL'
-                                }
-                            )
-                        )
-
-                    # if we only have a single year for a project, it's the all
-                    if not has_multiple and not agg_all_data:
-                        for pc in [trackercode, '_ALL']:
-                            ret_vals.append(
-                                to_geojson(
-                                    summary,
-                                    **{
-                                        **ffname,
-                                        'project_code': pc,
-                                        'year': 'all',
-                                    }
-                                )
-                            )
-
-                except Exception as e:
-                    print("EXCEPT", imonth, e, file=sys.stderr)
-
-                    ret_vals.append(to_geojson(FeatureCollection([]), **ffname))
+            ret_vals.append(to_geojson(FeatureCollection([]), **ffname))
 
     return ret_vals
 
@@ -1096,8 +1109,6 @@ def to_disk(geoobj, fname: str, **kwargs):
         #json.dump(geojson, f)
 
 
-#agg_data = load_agg_cache(year, species_aphia_id, skip=trackercode)
-
 def load_agg_cache(year: Optional[str], species_aphia_id: str, agg_discrim: str, skip: Optional[List[Tuple[str, str]]]=None) -> Dict[Tuple[str, str], geopandas.GeoDataFrame]:
     """
     Loads all matching year/aphia_id aggregate caches from disk.
@@ -1112,7 +1123,7 @@ def load_agg_cache(year: Optional[str], species_aphia_id: str, agg_discrim: str,
     p = Path(CONFIG.data_dir)
     for pp in p.glob(f'*-{year}-{species_aphia_id}-{agg_discrim}.geojson'):
         pproject, pyear, paphia, _ = pp.stem.split('-')
-        if (pproject, pyear) in skip:
+        if skip is not None and (pproject, pyear) in skip:
             continue
 
         bio = None
