@@ -3,6 +3,7 @@ import ReactDOM from "react-dom";
 import {useLocation, useHistory} from 'react-router';
 import axios from "axios";
 import _ from 'lodash';
+import classNames from "classnames";
 
 import GLMap from "./glmap.js";
 import CitationModal from "./citationModal.js";
@@ -13,7 +14,7 @@ import Legend from "./legend.js";
 import Palettes from "./palettes.js";
 import PaletteSwatch from "./paletteSwatch.js";
 import BaseStyles from "./baseStyles.js";
-import {IconPlus} from "./icon.js";
+import {IconCog} from "./icon.js";
 
 import { Popup } from "react-map-gl";
 import { objectTypeAnnotation } from "@babel/types";
@@ -31,7 +32,7 @@ function SpeciesVizApp(props) {
     location = useLocation(),
     history = useHistory();
 
-  const [basemapStyle, setBasemapStyle] = useState('greyscale');
+  const [basemapStyle, setBasemapStyle] = useState(localStorage.getItem('atp-basemap-name') || 'greyscale');
   const [dataInventory, setDataInventory] = useState([]);
   const [citations, setCitations] = useState({}); // project code -> {shortname, citation, website}
   const [maxLevels, setMaxLevels] = useState({}); // layerKey -> maximum
@@ -94,6 +95,11 @@ function SpeciesVizApp(props) {
   //     setYear(parseInt(query.get("year")));
   //   }
   // }, [location])
+
+  // store changes in localstorage
+  useEffect(() => {
+    localStorage.setItem('atp-basemap-name', basemapStyle)
+  }, [basemapStyle]);
 
   useEffect(() => {
     async function getInventory() {
@@ -343,7 +349,7 @@ function SpeciesVizApp(props) {
       <div className="tw-flex">
         <GLMap
           idField="key"
-          mapStyle={BaseStyles[basemapStyle]}
+          mapStyle={BaseStyles[basemapStyle].style}
           mapHeight={700}
           mapWidth={700}
           maxZoom={4}
@@ -353,8 +359,12 @@ function SpeciesVizApp(props) {
             <div className="tw-absolute tw-bottom-0 tw-right-0 tw-mb-8 tw-mr-4">
               <Legend
                 maxLevel={maxLevel}
-                palettes={layerData.filter(ld => ld.type === 'distribution').map((ld) => ld.palette)}
-                presents={layerData.filter(ld => ld.type === 'range').map(ld => ld.palette)}
+                palettes={layerData
+                  .filter((ld) => ld.type === "distribution")
+                  .map((ld) => ld.palette)}
+                presents={layerData
+                  .filter((ld) => ld.type === "range")
+                  .map((ld) => ld.palette)}
               />
             </div>
           }
@@ -421,18 +431,55 @@ function SpeciesVizApp(props) {
       </div>
 
       <div className="tw-bg-gray-300 tw-border-b tw-border-gray-600 tw-text-sm tw-py-2 tw-px-2 tw-relative">
-        <div className="tw-flex">
+        <div className="tw-flex tw-items-center">
           <img
             className="tw-w-16 tw-absolute tw-bottom-0 tw-mb-2 tw-border tw-border-gray-300 tw-rounded-md tw-shadow tw-cursor-pointer"
             src="https://secoora.org/wp-content/uploads/2017/06/fact_logo.jpg"
             alt="FACT Logo"
             onClick={() => setReadOnly(!readOnly)}
           />
-          <div className="tw-ml-16 tw-mr-4">
+          <div className="tw-ml-16">
             <span className="tw-ml-2 tw-font-bold">FACT DaViT</span> &middot;{" "}
             <a href="https://secoora.org/fact/" target="_blank">
               https://secoora.org/fact/
             </a>
+          </div>
+          <div className="tw-relative tw-mx-2 tw-group">
+            <div className="tw-p-1 tw-rounded-b group-hover:tw-bg-gray-100 group-hover:tw-shadow-sm">
+              <IconCog extraClasses=" tw-text-gray-700 group-hover:tw-text-gray-500" />
+            </div>
+
+            <div
+              className="tw-hidden group-hover:tw-block tw-absolute tw-bg-gray-100 tw-p-2 tw-rounded-tl tw-rounded-tr tw-rounded-br"
+              style={{ bottom: "2em" }}
+            >
+              <div className="tw-text-xs">Basemap Style</div>
+              <div className="tw-flex tw-flex-row tw-gap-1">
+                {Object.keys(BaseStyles).map((bs, i) => {
+                  return (
+                    <div
+                      key={`bsswatch-${i}`}
+                      onClick={(e) => setBasemapStyle(bs)}
+                      className={classNames(
+                        "tw-p-1 tw-rounded-md has-tooltip tw-cursor-pointer tw-w-10",
+                        {
+                          "tw-bg-gray-400 tw-shadow": bs === basemapStyle,
+                        }
+                      )}
+                    >
+                      <img
+                        className="tw-rounded-md tw-border tw-border-gray-500"
+                        src={BaseStyles[bs].thumbnail}
+                        alt={BaseStyles[bs].title}
+                      ></img>
+                      <span className="tooltip tw-capitalize">
+                        {BaseStyles[bs].title}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
           {shownProjectCodes.length > 0 && (
             <div
