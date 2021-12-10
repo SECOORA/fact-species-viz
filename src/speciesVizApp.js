@@ -174,11 +174,15 @@ function SpeciesVizApp(props) {
     });
   }
 
-  const updateShownProjects = (projectCodes, layerKey) => {
+  const updateShownProjects = (projectCodes, layerKey, remove = false) => {
     setShownProjects(curShownProjects => {
-      return {
-        ...curShownProjects,
-        [layerKey]: projectCodes
+      if (remove) {
+        return _.omit(curShownProjects, layerKey);
+      } else {
+        return {
+          ...curShownProjects,
+          [layerKey]: projectCodes,
+        };
       }
     })
   }
@@ -353,7 +357,7 @@ function SpeciesVizApp(props) {
           mapHeight={700}
           mapWidth={700}
           maxZoom={4}
-          interactiveLayerIds={layerData.map((ld) => ld.layerKey)}
+          interactiveLayerIds={Object.keys(shownProjects)}
           onHover={setHoverData}
           overlayComponents={
             <div className="tw-absolute tw-bottom-0 tw-right-0 tw-mb-8 tw-mr-4">

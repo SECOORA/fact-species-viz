@@ -107,6 +107,13 @@ const DataLayer = ({
     updateShownProjects(projectCodes, layerKey);
   }, [data]);
 
+  useEffect(() => {
+    if (!isLoading || !updateShownProjects) {
+      return
+    }
+    updateShownProjects([], layerKey, true);
+  }, [isLoading])
+
   if (!isLoading && !isError) {
     return (
       <Source
