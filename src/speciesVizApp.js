@@ -282,7 +282,7 @@ function SpeciesVizApp(props) {
             {hoverData.lat.toFixed(1)}, {hoverData.lon.toFixed(1)}
           </div>
 
-          <div className="tw-grid tw-gap-2 tw-text-xs tw-items-center" style={{'grid-template-columns': 'min-content min-content max-content max-content'}}>
+          <div className="tw-grid tw-gap-2 tw-text-xs tw-items-center" style={{'gridTemplateColumns': 'min-content min-content max-content max-content'}}>
             {selLayers.map((l, i) => {
               let monthName =
                 !l.month || l.month === "all"
