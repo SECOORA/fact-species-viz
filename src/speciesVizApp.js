@@ -253,8 +253,7 @@ function SpeciesVizApp(props) {
 
     const selLayerKeys = hoverData.layers.map(l => l.id),
       selLayers = layerData.filter(ld => selLayerKeys.indexOf(ld.layerKey) !== -1),
-      hasDists = selLayers.filter(ld => ld.type === 'distribution').length > 0,
-      rangeWClass = hasDists ? 'tw-w-28' : '';
+      hasDists = selLayers.filter(ld => ld.type === 'distribution').length > 0;
 
     return (
       <Popup
@@ -273,7 +272,7 @@ function SpeciesVizApp(props) {
             {hoverData.lat.toFixed(1)}, {hoverData.lon.toFixed(1)}
           </div>
 
-          <div>
+          <div className="tw-grid tw-gap-2 tw-text-xs tw-items-center" style={{'grid-template-columns': 'min-content min-content max-content max-content'}}>
             {selLayers.map((l, i) => {
               let monthName =
                 !l.month || l.month === "all"
@@ -283,14 +282,13 @@ function SpeciesVizApp(props) {
                     });
 
               return (
-                <div
-                  key={`popup-${i}`}
-                  className="tw-flex tw-items-center tw-text-xs tw-gap-2"
-                >
+                <React.Fragment key={`popup-${i}`}>
                   {l.type === "distribution" ? (
                     <>
-                      <div className="tw-w-6 tw-text-right">
-                        {hoverData.layers[i].level}
+                      <div className="tw-text-right tw-font-mono tw-w-14 tw-overflow-hidden">
+                        {hoverData.layers[i].level % 1 !== 0
+                          ? hoverData.layers[i].level.toFixed(2)
+                          : hoverData.layers[i].level}
                       </div>
                       <div>
                         <PaletteSwatch
@@ -306,15 +304,17 @@ function SpeciesVizApp(props) {
                       </div>
                     </>
                   ) : (
-                    <div className={rangeWClass}>
-                      <PaletteSwatch
-                        palette={l.palette}
-                        extraClasses={"tw-shadow tw-border tw-border-black"}
-                        holderClasses={"tw-float-right"}
-                        size={4}
-                        rounded={false}
-                      />
-                    </div>
+                    <>
+                      <div>Present</div>
+                      <div className="tw-justify-self-end">
+                        <PaletteSwatch
+                          palette={l.palette}
+                          extraClasses={"tw-shadow tw-border tw-border-black"}
+                          size={4}
+                          rounded={false}
+                        />
+                      </div>
+                    </>
                   )}
                   <div className="tw-text-gray-700 tw-font-bold tw-capitalize">
                     {speciesLookup[l.aphiaId]?.commonName}
@@ -329,7 +329,7 @@ function SpeciesVizApp(props) {
                       </>
                     )}
                   </div>
-                </div>
+                </React.Fragment>
               );
             })}
           </div>
