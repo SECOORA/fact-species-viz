@@ -450,7 +450,7 @@ function SpeciesVizApp(props) {
           </div>
           <div className="tw-relative tw-mx-2 tw-group">
             <div className="tw-p-1 tw-rounded-b group-hover:tw-bg-gray-100 group-hover:tw-shadow-sm">
-              <IconCog extraClasses=" tw-text-gray-700 group-hover:tw-text-gray-500" />
+              <IconCog extraClasses={classNames("tw-text-gray-700 group-hover:tw-text-gray-500", {'tw-invisible': readOnly})} />
             </div>
 
             <div
