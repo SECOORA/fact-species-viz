@@ -4,7 +4,7 @@ import _ from 'lodash';
 
 import Chooser from "./chooser.js";
 import Palettes from "./palettes.js";
-import {IconLeft, IconRight, IconZoom} from "./icon.js";
+import {IconLeft, IconQuestion, IconRight, IconZoom} from "./icon.js";
 import classNames from "classnames";
 import PaletteSwatch from "./paletteSwatch.js";
 
@@ -313,10 +313,22 @@ const LayerEditor = (props) => {
         }
       />
 
-      <div className="tw-flex tw-mx-2 tw-my-4">
+      <div className="tw-flex tw-mx-2 tw-my-4 tw-items-center">
+
+        <div className="tw-has-tooltip">
+          <IconQuestion extraClasses={"tw-text-gray-600 tw-pr-2 tw-pl-0"} size={5} onClick={e => window.location.hash = "at-120450"} />
+          <div className="tw-tooltip tw-text-black tw-font-normal">
+            <span className="tw-font-semibold">Distribution</span>: Geographic area where individuals from a population
+            occur.
+            <br />
+            <span className="tw-font-semibold">Range</span>: Geographic limits in which a species (or population)
+            exists.
+          </div>
+        </div>
+
         <button
           className={classNames(
-            "tw-text-sm tw-flex-grow tw-rounded-r-none tw-border-r-0  hover:tw-scale-110 focus:tw-outline-none tw-flex tw-justify-center tw-px-4 tw-py-2 tw-rounded tw-font-bold tw-cursor-pointer",
+            "tw-text-sm tw-flex-grow tw-rounded-r-none tw-border-r-0  hover:tw-scale-110 focus:tw-outline-none tw-flex tw-justify-center tw-px-4 tw-py-3 tw-rounded tw-font-bold tw-cursor-pointer",
             {
               "hover:tw-bg-indigo-200 tw-bg-indigo-100 tw-text-indigo-700 tw-border tw-duration-200 tw-ease-in-out tw-border-indigo-600 tw-transition":
                 props.currentLayer.type === "distribution",
@@ -326,11 +338,13 @@ const LayerEditor = (props) => {
           )}
           onClick={() => _updateLayer({ type: "distribution" })}
         >
-          <div className="tw-flex tw-leading-5">Distribution</div>
+          <div className="tw-flex tw-leading-5 tw-items-center">
+            Distribution
+          </div>
         </button>
         <button
           className={classNames(
-            "tw-text-sm tw-flex-grow tw-rounded-l-none tw-border-l-0  hover:tw-scale-110 focus:tw-outline-none tw-flex tw-justify-center tw-px-4 tw-py-2 tw-rounded tw-font-bold tw-cursor-pointer",
+            "tw-text-sm tw-flex-grow tw-rounded-l-none tw-border-l-0  hover:tw-scale-110 focus:tw-outline-none tw-flex tw-justify-center tw-px-4 tw-py-3 tw-rounded tw-font-bold tw-cursor-pointer",
             {
               "hover:tw-bg-indigo-200 tw-bg-indigo-100 tw-text-indigo-700 tw-border tw-duration-200 tw-ease-in-out tw-border-indigo-600 tw-transition":
                 props.currentLayer.type === "range",
@@ -340,8 +354,9 @@ const LayerEditor = (props) => {
           )}
           onClick={() => _updateLayer({ type: "range" })}
         >
-          <div className="tw-flex tw-leading-5">Range</div>
+          <div className="tw-flex tw-leading-5 tw-items-center">Range</div>
         </button>
+
       </div>
 
       <hr className="tw-my-2" />
