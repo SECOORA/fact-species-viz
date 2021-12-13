@@ -20,7 +20,7 @@
   overflow: visible !important;
 }
 
-#app .full-bleed {
+#app.full-bleed, #app .full-bleed{
   position: relative;
   z-index: 999;
   width: calc(100vw - 40px);
