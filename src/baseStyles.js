@@ -4,7 +4,7 @@ const esriWorldTopo = {
     "raster-tiles": {
       type: "raster",
       tiles: [
-        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
+        "//server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
       ],
       tileSize: 256,
       attribution:
@@ -25,11 +25,19 @@ const esriWorldTopo = {
 const esriOceans = {
   version: 8,
   sources: {
+    "reference-tiles": {
+      type: "raster",
+      tiles: [
+        "//services.arcgisonline.com/arcgis/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}",
+      ],
+      tileSize: 256,
+      attribution:
+        "Tiles ©  Esri, Garmin, GEBCO, NOAA NGDC, and other contributors",
+    },
     "raster-tiles": {
       type: "raster",
       tiles: [
-        // "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
-        "http://services.arcgisonline.com/arcgis/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}",
+        "//services.arcgisonline.com/arcgis/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}",
       ],
       tileSize: 256,
       attribution:
@@ -44,7 +52,14 @@ const esriOceans = {
       minzoom: 0,
       maxzoom: 22,
     },
-  ],
+    {
+      id: "reference-tiles",
+      type: "raster",
+      source: "reference-tiles",
+      minzoom: 0,
+      maxzoom: 22,
+    }
+  ]
 };
 
 const stamenTerrain = {
