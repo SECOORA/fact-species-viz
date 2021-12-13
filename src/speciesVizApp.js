@@ -348,6 +348,11 @@ function SpeciesVizApp(props) {
     );
   }, [hoverData]);
 
+  const onMapClick = (clickData) => {
+    const selLayerKeys = Array.from(new Set(clickData.layers.flatMap(l => l.project_codes.split(","))));
+    setShowCitations(selLayerKeys);
+  }
+
   return (
     <div className="tw-relative tw-text-base">
       <div className="tw-flex">
@@ -359,6 +364,7 @@ function SpeciesVizApp(props) {
           maxZoom={4}
           interactiveLayerIds={Object.keys(shownProjects)}
           onHover={setHoverData}
+          onClick={onMapClick}
           overlayComponents={
             <div className="tw-absolute tw-bottom-0 tw-right-0 tw-mb-8 tw-mr-4">
               <Legend

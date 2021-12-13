@@ -130,6 +130,38 @@ function GLMap(props) {
       props.onHover({});
     }
   }
+  
+  const onMapClick = (e) => {
+    if (!props.onClick) {
+      return;
+    }
+    if (e.features.length > 0) {
+      let feats = [...e.features];
+
+      for (let i = 0; i < feats.length; i++) {
+        // take first feature, strip out any matching that source key
+        feats = [
+          ...feats.slice(0, i + 1),
+          ...feats.slice(i).filter((f) => f.source != feats[i].source),
+        ];
+      }
+
+      // console.info(feats, e);
+      const [lon, lat] = e.lngLat;
+      props.onClick({
+        lon: lon,
+        lat: lat,
+        layers: feats.map((f) => {
+          return {
+            id: f.layer.id,
+            ...f.properties,
+          };
+        }),
+      });
+    } else {
+      props.onClick({});
+    }
+  }
 
   // TODO: useEffect on layerData changes to calculate allbbox
   // TODO: allBbox should be a memo calc on layerData
@@ -142,7 +174,7 @@ function GLMap(props) {
             <ReactMapGL
               {...viewport}
               mapStyle={props.mapStyle || mapstyle}
-              // onClick={onMapClick}
+              onClick={onMapClick}
               interactiveLayerIds={
                 props.interactiveLayerIds || Object.keys(props.layerData || {})
               }
