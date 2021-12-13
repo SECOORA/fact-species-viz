@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from "react";
 import ReactDOM from "react-dom";
-import {useLocation, useHistory} from 'react-router';
 import axios from "axios";
 import _ from 'lodash';
 import classNames from "classnames";
+import { Popup } from "react-map-gl";
 
 import GLMap from "./glmap.js";
 import CitationModal from "./citationModal.js";
@@ -16,28 +16,22 @@ import PaletteSwatch from "./paletteSwatch.js";
 import BaseStyles from "./baseStyles.js";
 import {IconCog} from "./icon.js";
 
-import { Popup } from "react-map-gl";
-import { objectTypeAnnotation } from "@babel/types";
-
-
 const getRandomItem = (iterable) => iterable[Math.floor(Math.random() * iterable.length)]
-
-const useQuery = () => {
-  return new URLSearchParams(useLocation().search);
-}
 
 function SpeciesVizApp(props) {
 
-  let query = useQuery(),
-    location = useLocation(),
-    history = useHistory();
+  // load layerData from localstorage, but swallow errors
+  let storedLayerData = undefined;
+  try {
+    storedLayerData = JSON.parse(localStorage.getItem('atp-layerData') || 'null');
+  } catch (e) {}
 
   const [basemapStyle, setBasemapStyle] = useState(localStorage.getItem('atp-basemap-name') || 'greyscale');
   const [dataInventory, setDataInventory] = useState([]);
   const [citations, setCitations] = useState({}); // project code -> {shortname, citation, website}
   const [maxLevels, setMaxLevels] = useState({}); // layerKey -> maximum
   const [shownProjects, setShownProjects] = useState({}); // layerKey -> [project codes]
-  const [layerData, setLayerData] = useState([
+  const [layerData, setLayerData] = useState(storedLayerData || [
     {
       layerKey: "ooba",
       aphiaId: 105793,
@@ -46,7 +40,7 @@ function SpeciesVizApp(props) {
       month: 'all',
       palette: "viridis",
       type: "distribution",
-    },
+    }
   ]);
   const [activeIdx, setActiveIdx] = useState(0);
   const [showCitations, setShowCitations] = useState([]);   // list of project codes
@@ -61,45 +55,20 @@ function SpeciesVizApp(props) {
     return _.uniq(_.flatMap(Object.values(shownProjects)));
   }, [shownProjects]);
 
-  const buildQueryString = (newArgs) => {
-    let {newMonth = month, newYear = year, newAphiaId = aphiaId} = newArgs;
-
-    let vals = {
-      month: newMonth,
-      year: newYear,
-      aphiaId: newAphiaId
-    }
-
-    let kvp = Object.entries(vals).map(kv => kv.join("=")).join("&");
-    let temp = `?${kvp}`;
-
-    return temp;
-  }
-
-  // // handle any url params controlling state
-  // useEffect(() => {
-  //   if (query.has("aphiaId")) {
-  //     const aphiaId = parseInt(query.get("aphiaId"));
-  //     setAphiaId(aphiaId);
-  //   }
-
-  //   if (query.has("month")) {
-  //     let m = query.get("month");
-  //     if (m !== "all") {
-  //       m = parseInt(m);
-  //     }
-  //     setMonth(m);
-  //   }
-
-  //   if (query.has("year")) {
-  //     setYear(parseInt(query.get("year")));
-  //   }
-  // }, [location])
-
+  //
   // store changes in localstorage
+  //
   useEffect(() => {
     localStorage.setItem('atp-basemap-name', basemapStyle)
   }, [basemapStyle]);
+
+  useEffect(() => {
+    localStorage.setItem('atp-layerData', JSON.stringify(layerData));
+  }, [layerData])
+
+  //
+  // get data on load
+  //
 
   useEffect(() => {
     async function getInventory() {
