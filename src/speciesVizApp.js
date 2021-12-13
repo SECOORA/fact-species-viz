@@ -352,7 +352,7 @@ function SpeciesVizApp(props) {
     if (!clickData.layers) {
       return;
     }
-    const selLayerKeys = Array.from(new Set(clickData.layers.flatMap(l => l.project_codes.split(","))));
+    const selLayerKeys = Array.from(new Set(clickData.layers.flatMap(l => l.project_codes.split(",").map(pc => pc.trim()))));
     setShowCitations(selLayerKeys);
   }
 
