@@ -20,7 +20,7 @@
   overflow: visible !important;
 }
 
-#app.full-bleed {
+#app .full-bleed {
   position: relative;
   z-index: 999;
   width: calc(100vw - 40px);
@@ -28,6 +28,15 @@
   margin-left: -50vw;
   right: 50%;
   margin-right: -50vw;
+}
+
+#app > div {
+  background-color: white;
+}
+
+#app .entry-content table td {
+  padding: inherit !important;
+  font-size: inherit !important;
 }
 
 #app .mapboxgl-popup-tip {
