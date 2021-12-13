@@ -5,7 +5,7 @@ import classNames from "classnames";
 function Chooser(props) {
 
   return (
-    <div>
+    <div className={classNames(props.extraClasses)}>
       <div className="tw-text-sm">{props.label}</div>
       <div className="tw-flex tw-items-center">
 

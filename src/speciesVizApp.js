@@ -353,16 +353,19 @@ function SpeciesVizApp(props) {
           onClick={onMapClick}
           overlayComponents={
             <>
-              {loading && loading.length > 0 && (
-                <div className="tw-text-indigo-700 tw-inset-1/2 tw-absolute tw--ml-16 tw--mt-16">
-                  <Oval
-                    height={"10em"}
-                    width={"10em"}
-                    stroke="currentColor"
-                    strokeWidth={5}
-                  />
-                </div>
-              )}
+              <div
+                className={classNames(
+                  "tw-text-indigo-700 tw-inset-1/2 tw-absolute tw--ml-16 tw--mt-16",
+                  { "tw-hidden": !loading || loading.length === 0 }
+                )}
+              >
+                <Oval
+                  height={"10em"}
+                  width={"10em"}
+                  stroke="currentColor"
+                  strokeWidth={5}
+                />
+              </div>
               <div className="tw-absolute tw-bottom-0 tw-right-0 tw-mb-8 tw-mr-4">
                 <Legend
                   maxLevel={maxLevel}
@@ -425,7 +428,7 @@ function SpeciesVizApp(props) {
                 );
               })}
           </div>
-          <div>
+          <div className="tw-h-full">
             {!readOnly && (
               <LayerEditor
                 notifyUpdate={onLayerUpdate}

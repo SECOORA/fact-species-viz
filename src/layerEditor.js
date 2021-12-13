@@ -222,6 +222,7 @@ const LayerEditor = (props) => {
         onClick={(v) => _updateLayer({ aphiaId: v, project: "_ALL" })} // always reset project when changing species
         curVal={props.currentLayer.aphiaId}
         label="Species"
+        extraClasses="tw-mb-2"
       />
 
       <Chooser
@@ -230,6 +231,7 @@ const LayerEditor = (props) => {
         onClick={(v) => _updateLayer({ project: v })}
         curVal={props.currentLayer.project}
         label="Project"
+        extraClasses="tw-mb-2"
       />
 
       <Chooser
@@ -283,6 +285,7 @@ const LayerEditor = (props) => {
             enabled={enableNextYear}
           />
         }
+        extraClasses="tw-mb-2"
       />
 
       <Chooser
@@ -311,6 +314,7 @@ const LayerEditor = (props) => {
             enabled={enableNextMonth}
           />
         }
+        extraClasses="tw-mb-2"
       />
 
       <div className="tw-flex tw-mx-2 tw-my-4 tw-items-center">
@@ -406,9 +410,9 @@ const LayerEditor = (props) => {
               </div>
             </div>
 
-            <div className="tw-absolute tw-right-0 tw-h-full tw-top-0">
+            <div className="tw-absolute tw-right-0 tw-h-full tw-top-0 tw-text-sm">
               <label
-                className={classNames("tw-inline-flex tw-items-center", {
+                className={classNames("tw-inline-flex tw-items-center tw-font-normal", {
                   "tw-cursor-pointer": canInvertPalette,
                   "tw-cursor-not-allowed": !canInvertPalette,
                 })}
@@ -434,7 +438,7 @@ const LayerEditor = (props) => {
       </div>
 
       <div>
-        <label htmlFor="opacity" className="tw-block tw-text-sm">
+        <label htmlFor="opacity" className="tw-block tw-text-sm tw-font-normal">
           Opacity
         </label>
         <div className="tw-inline-block tw-relative tw-w-full">
