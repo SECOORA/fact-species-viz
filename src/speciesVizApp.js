@@ -349,6 +349,9 @@ function SpeciesVizApp(props) {
   }, [hoverData]);
 
   const onMapClick = (clickData) => {
+    if (!clickData.layers) {
+      return;
+    }
     const selLayerKeys = Array.from(new Set(clickData.layers.flatMap(l => l.project_codes.split(","))));
     setShowCitations(selLayerKeys);
   }
