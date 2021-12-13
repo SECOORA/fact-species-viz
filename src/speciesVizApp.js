@@ -4,6 +4,7 @@ import axios from "axios";
 import _ from 'lodash';
 import classNames from "classnames";
 import { Popup } from "react-map-gl";
+import { Oval } from "react-loading-icons";
 
 import GLMap from "./glmap.js";
 import CitationModal from "./citationModal.js";
@@ -46,6 +47,7 @@ function SpeciesVizApp(props) {
   const [showCitations, setShowCitations] = useState([]);   // list of project codes
   const [readOnly, setReadOnly] = useState(false);      // removes interactive UI
   const [hoverData, setHoverData] = useState({});       // lat, lon, layers
+  const [loading, setLoading] = useState([]);           // [layerKey]
 
   const maxLevel = useMemo(() => {
     return Math.max(...Object.values(maxLevels));
@@ -153,6 +155,18 @@ function SpeciesVizApp(props) {
           [layerKey]: projectCodes,
         };
       }
+    })
+  }
+
+  const updateLoading = (layerKey, isLoading) => {
+    setLoading(curLoading => {
+      const lSet = new Set(curLoading);
+      if (isLoading) {
+        lSet.add(layerKey);
+      } else {
+        lSet.delete(layerKey);
+      }
+      return Array.from(lSet);
     })
   }
 
@@ -338,17 +352,29 @@ function SpeciesVizApp(props) {
           onHover={setHoverData}
           onClick={onMapClick}
           overlayComponents={
-            <div className="tw-absolute tw-bottom-0 tw-right-0 tw-mb-8 tw-mr-4">
-              <Legend
-                maxLevel={maxLevel}
-                palettes={layerData
-                  .filter((ld) => ld.type === "distribution")
-                  .map((ld) => ld.palette)}
-                presents={layerData
-                  .filter((ld) => ld.type === "range")
-                  .map((ld) => ld.palette)}
-              />
-            </div>
+            <>
+              {loading && loading.length > 0 && (
+                <div className="tw-text-indigo-700 tw-inset-1/2 tw-absolute tw--ml-16 tw--mt-16">
+                  <Oval
+                    height={"10em"}
+                    width={"10em"}
+                    stroke="currentColor"
+                    strokeWidth={5}
+                  />
+                </div>
+              )}
+              <div className="tw-absolute tw-bottom-0 tw-right-0 tw-mb-8 tw-mr-4">
+                <Legend
+                  maxLevel={maxLevel}
+                  palettes={layerData
+                    .filter((ld) => ld.type === "distribution")
+                    .map((ld) => ld.palette)}
+                  presents={layerData
+                    .filter((ld) => ld.type === "range")
+                    .map((ld) => ld.palette)}
+                />
+              </div>
+            </>
           }
         >
           {layerData.map((ld, idx) => {
@@ -365,6 +391,7 @@ function SpeciesVizApp(props) {
                 opacity={ld.opacity}
                 updateLegendLevel={updateLegendLevel}
                 updateShownProjects={updateShownProjects}
+                updateLoading={updateLoading}
                 maxLevel={maxLevel}
                 type={ld.type}
               />
@@ -428,7 +455,12 @@ function SpeciesVizApp(props) {
           </div>
           <div className="tw-relative tw-mx-2 tw-group">
             <div className="tw-p-1 tw-rounded-b group-hover:tw-bg-gray-100 group-hover:tw-shadow-sm">
-              <IconCog extraClasses={classNames("tw-text-gray-700 group-hover:tw-text-gray-500", {'tw-invisible': readOnly})} />
+              <IconCog
+                extraClasses={classNames(
+                  "tw-text-gray-700 group-hover:tw-text-gray-500",
+                  { "tw-invisible": readOnly }
+                )}
+              />
             </div>
 
             <div

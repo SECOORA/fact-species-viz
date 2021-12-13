@@ -70,6 +70,7 @@ const DataLayer = ({
   layerKey,
   updateLegendLevel,
   updateShownProjects,
+  updateLoading,
   maxLevel = 10,
   type = 'distribution'
 }) => {
@@ -113,6 +114,14 @@ const DataLayer = ({
     }
     updateShownProjects([], layerKey, true);
   }, [isLoading])
+
+  useEffect(() => {
+    if (!updateLoading) {
+      return;
+    }
+
+    updateLoading(layerKey, isLoading);
+  }, [isLoading]);
 
   if (!isLoading && !isError) {
     return (
