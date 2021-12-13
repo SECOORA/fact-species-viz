@@ -374,14 +374,14 @@ const LayerEditor = (props) => {
               <div className="tw-inline-block tw-p-1 tw-rounded-t group-hover:tw-bg-gray-100">
                 <PaletteSwatch
                   palette={props.currentLayer.palette}
-                  size={7}
+                  size={8}
                   extraClasses={classNames(
                     "tw-cursor-pointer tw-shadow tw-border-gray-700 tw-border-2"
                   )}
                 />
               </div>
 
-              <div className="tw-hidden group-hover:tw-block tw-absolute tw-w-full tw-bg-gray-100 tw-z-50 tw-p-1 tw-shadow tw-rounded-bl tw-rounded-br tw-rounded-tr">
+              <div className="tw-hidden group-hover:tw-block tw-absolute tw-w-full tw-bg-gray-100 tw-z-50 tw-p-1 tw-shadow tw-rounded-bl tw-rounded-br tw-rounded-tr tw-top-10">
                 <div className="tw-flex tw-justify-around">
                   {Object.keys(shownPalettes).map((p) => {
                     return (
