@@ -4,11 +4,11 @@
 
 @tailwind utilities;
 
-.tooltip {
+.tw-tooltip {
   @apply tw-invisible tw-absolute tw-p-1 tw-rounded tw-border tw-border-gray-200 tw-bg-gray-100 tw-shadow-lg tw-mt-8 tw-text-sm;
 }
 
-.has-tooltip:hover .tooltip {
+.tw-has-tooltip:hover .tw-tooltip {
   @apply tw-visible tw-z-50;
 }
 

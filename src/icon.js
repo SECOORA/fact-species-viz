@@ -16,7 +16,7 @@ export const IconBase = ({
     <div
       className={classNames("tw-cursor-pointer tw-px-2", extraClasses, {
         "tw-text-gray-400 tw-cursor-not-allowed": !enabled,
-        "has-tooltip": tooltip,
+        "tw-has-tooltip": tooltip,
       })}
       onClick={(e) => {
         if (!enabled) {
@@ -26,7 +26,7 @@ export const IconBase = ({
         onClick();
       }}
     >
-      {tooltip && enabled && <span className="tooltip">{tooltip}</span>}
+      {tooltip && enabled && <span className="tw-tooltip">{tooltip}</span>}
       <svg
         xmlns="http://www.w3.org/2000/svg"
         className={`tw-h-${size} tw-w-${size}`}

@@ -465,7 +465,7 @@ function SpeciesVizApp(props) {
                       key={`bsswatch-${i}`}
                       onClick={(e) => setBasemapStyle(bs)}
                       className={classNames(
-                        "tw-p-1 tw-rounded-md has-tooltip tw-cursor-pointer tw-w-10",
+                        "tw-p-1 tw-rounded-md tw-has-tooltip tw-cursor-pointer tw-w-10",
                         {
                           "tw-bg-gray-400 tw-shadow": bs === basemapStyle,
                         }
@@ -476,7 +476,7 @@ function SpeciesVizApp(props) {
                         src={BaseStyles[bs].thumbnail}
                         alt={BaseStyles[bs].title}
                       ></img>
-                      <span className="tooltip tw-capitalize">
+                      <span className="tw-tooltip tw-capitalize">
                         {BaseStyles[bs].title}
                       </span>
                     </div>
