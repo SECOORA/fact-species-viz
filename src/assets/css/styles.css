@@ -16,6 +16,10 @@
   margin-bottom: 45px;
 }
 
+#app svg.icon-loading {
+  overflow: visible !important;
+}
+
 #app.full-bleed {
   position: relative;
   z-index: 999;
