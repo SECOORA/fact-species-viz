@@ -2,6 +2,7 @@ import re
 import sys
 from io import BytesIO
 from pathlib import Path
+from pprint import pformat
 from typing import Any, Dict, List, Optional
 from zipfile import ZipFile
 
@@ -165,15 +166,21 @@ def get_from_graphql(trackercode: str, year: str, path: str):
 
     logger.info("get_from_graphql: retrieving list of detection zips")
     query = """
-    {
+    query FindDetections($trackercode: String, $year: String = "") {
         organization(id: 2563073) {
-            name,
-            files(folderName: "Your tag detections"){
+            name
+            projects(search: $trackercode) {
                 nodes {
-                    id,
-                    name,
-                    project {
-                        name
+                    name
+                    folders(search: "Your tag detections") {
+                        nodes {
+                            files(search: $year) {
+                                nodes {
+                                    id,
+                                    name
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -186,19 +193,30 @@ def get_from_graphql(trackercode: str, year: str, path: str):
         json={
             'operationName': None,
             'query': query,
-            'variables': {}
+            'variables': {'trackercode': trackercode, 'year': str(year)}
         },
         headers={
             'Authorization': f'Bearer {CONFIG.rw_auth_token}'
         }
     )
 
-    r.raise_for_status()
+    if r.status_code != 200:
+        raise ValueError(f"get_from_graphql returned error ({r.status_code}):\n {pformat(r.text)}")
 
-    rproject = re.compile(f'^{trackercode}\\W')
-    all_nodes = r.json()['data']['organization']['files']['nodes']
-    nodes = [d for d in all_nodes if \
-             d['name'].endswith(f"{year}.zip") and rproject.match(d['project']['name'])]
+    all_projects = r.json()['data']['organization']['projects']['nodes']
+    if len(all_projects) > 1:
+        raise ValueError(f"Too many projects returned from graphql query ({len(all_projects)}): {','.join((p['name'] for p in all_projects))}")
+
+    folder_nodes = all_projects[0]['folders']['nodes']
+    if len(folder_nodes) > 1:
+        raise ValueError(f"Too many folders returned from graphql query ({len(folder_nodes)})")
+
+    nodes = [n for n in folder_nodes[0]['files']['nodes']]
+    if len(nodes) > 1:
+        raise ValueError(f"Too many files returned from graphql query ({len(nodes)}): {','.join((n['name'] for n in nodes))}")
+
+    if len(nodes) == 0:
+        raise ValueError(f"No source data zip found in graphql query (trackercode: {trackercode}, year: {year})")
 
     urls = [f"https://researchworkspace.com/files/{n['id']}/{n['name']}" for n in nodes]
     url = urls[0]
