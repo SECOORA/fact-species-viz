@@ -10,11 +10,12 @@ export const IconBase = ({
 	size = 6,
 	onClick,
   enabled = true,
+  paddingx = 2,
   tooltip
 }) => {
 	return (
     <div
-      className={classNames("tw-cursor-pointer tw-px-2", extraClasses, {
+      className={classNames("tw-cursor-pointer", `tw-px-${paddingx}`, extraClasses, {
         "tw-text-gray-400 tw-cursor-not-allowed": !enabled,
         "tw-has-tooltip": tooltip,
       })}
@@ -60,7 +61,9 @@ IconBase.propTypes = {
 	extraClasses: PropTypes.string,
 	size: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
 	onClick: PropTypes.func,
-  enabled: PropTypes.bool
+  enabled: PropTypes.bool,
+  paddingx: PropTypes.number,
+  tooltip: PropTypes.string,
 }
 
 // https://heroicons.com/
@@ -131,6 +134,15 @@ export const IconZoom = (props) => {
   )
 }
 
+export const IconZoomOut = (props) => {
+  return (
+    <IconBase
+      path="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7"
+      {...props}
+    />
+  )
+}
+
 export const IconPlus = (props) => {
   return (
     <IconBase
@@ -154,6 +166,34 @@ export const IconQuestion = (props) => {
   return (
     <IconBase
       path="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+      {...props}
+    />
+  );
+}
+
+export const IconEye = (props) => {
+  return (
+    <IconBase
+      path="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+      path2="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+      {...props}
+    />
+  );
+}
+
+export const IconEyeOff = (props) => {
+  return (
+    <IconBase
+      path="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+      {...props}
+    />
+  );
+}
+
+export const IconImage = (props) => {
+  return (
+    <IconBase
+      path="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
       {...props}
     />
   );

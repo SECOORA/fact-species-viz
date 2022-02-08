@@ -15,7 +15,8 @@ import Legend from "./legend.js";
 import Palettes from "./palettes.js";
 import PaletteSwatch from "./paletteSwatch.js";
 import BaseStyles from "./baseStyles.js";
-import {IconCog} from "./icon.js";
+import {IconCog, IconZoom, IconZoomOut, IconEye, IconEyeOff, IconImage} from "./icon.js";
+import SpeciesImage from "./speciesImage.js";
 
 const getRandomItem = (iterable) => iterable[Math.floor(Math.random() * iterable.length)]
 
@@ -32,6 +33,7 @@ function SpeciesVizApp(props) {
   const [citations, setCitations] = useState({}); // project code -> {shortname, citation, website}
   const [maxLevels, setMaxLevels] = useState({}); // layerKey -> maximum
   const [shownProjects, setShownProjects] = useState({}); // layerKey -> [project codes]
+  const [speciesPhotos, setSpeciesPhotos] = useState({}); // aphiaID -> {urls/media metadata}
   const [layerData, setLayerData] = useState(storedLayerData || [
     {
       layerKey: "ooba",
@@ -48,6 +50,8 @@ function SpeciesVizApp(props) {
   const [readOnly, setReadOnly] = useState(false);      // removes interactive UI
   const [hoverData, setHoverData] = useState({});       // lat, lon, layers
   const [loading, setLoading] = useState([]);           // [layerKey]
+  const [miniPhotos, setMiniPhotos] = useState(false);  // makes species photos small/round
+  const [showPhotos, setShowPhotos] = useState(true);   // makes species photos shown or not
 
   const maxLevel = useMemo(() => {
     return Math.max(...Object.values(maxLevels));
@@ -87,6 +91,42 @@ function SpeciesVizApp(props) {
     }
     getCitations();
   }, []);
+
+  useEffect(() => {
+    async function getPhotos() {
+      const response = await axios.get(
+        `${
+          process.env.MEDIA_URL ||
+          "https://secoora.org/wp-json/wp/v2/media?per_page=100&search=aphiaID&_fields=caption,media_details"
+        }`
+      );
+
+      const raphiaId = /aphiaID:\s?(\d+)/
+      const photos = Object.fromEntries(response.data.map(e => {
+        const aphiaID = e.caption.rendered.match(raphiaId)[1];
+
+        return [aphiaID, e.media_details];
+      }));
+
+      setSpeciesPhotos(photos);
+    }
+    getPhotos();
+  }, []);
+
+  const visiblePhotos = useMemo(() => {
+    const aphiaIds = new Set(layerData.map(ld => ld.aphiaId)),
+      hovered = Object.keys(hoverData).length === 0 ? new Set() : new Set(hoverData.layers.map(ld => ld.species_aphia_id)),
+      anyHovered = hovered.size > 0,
+      sp = Array.from(aphiaIds).map(aphiaId => {
+        return {
+          media: speciesPhotos[aphiaId],
+          highlight: hovered.has(aphiaId),
+          dehilight: anyHovered && !hovered.has(aphiaId)
+        }
+      });
+
+    return sp.filter(s => s.media !== undefined);
+  }, [speciesPhotos, layerData, hoverData]);
 
   const speciesLookup = useMemo(() => {
     return _.fromPairs(dataInventory.map(di => {
@@ -353,6 +393,89 @@ function SpeciesVizApp(props) {
           onClick={onMapClick}
           overlayComponents={
             <>
+              {visiblePhotos && visiblePhotos.length > 0 && (
+                <div
+                  className="tw-py-1 tw-flex tw-flex-row tw-pointer-events-auto tw-max-w-max tw-select-none"
+                  style={{ maxHeight: "90%" }}
+                >
+                  <div
+                    className={classNames(
+                      "tw-flex tw-flex-col tw-items-start",
+                      {
+                        "tw-space-y-2": showPhotos,
+                      }
+                    )}
+                  >
+                    <div
+                      className={classNames(
+                        "tw-flex tw-flex-row tw-bg-gray-300 tw-border-gray-600 tw-border tw-p-1 tw-rounded-sm",
+                        { "tw-invisible": readOnly }
+                      )}
+                    >
+                      <IconImage
+                        size={4}
+                        paddingx={0}
+                        extraClasses="tw-text-gray-500"
+                      />
+                      <span className="tw-text-xs tw-uppercase tw-text-gray-500 tw-mr-4">
+                        Photos
+                      </span>
+                      {showPhotos ? (
+                        <IconEyeOff
+                          extraClasses=""
+                          size={4}
+                          paddingx={1}
+                          onClick={(e) => setShowPhotos(!showPhotos)}
+                          tooltip="Hide Photos"
+                        />
+                      ) : (
+                        <IconEye
+                          extraClasses=""
+                          size={4}
+                          paddingx={1}
+                          onClick={(e) => setShowPhotos(!showPhotos)}
+                          tooltip="Show Photos"
+                        />
+                      )}
+                      {miniPhotos ? (
+                        <IconZoom
+                          extraClasses="tw-flex-initial tw-align-center"
+                          size={4}
+                          paddingx={1}
+                          tooltip="Expand Photos"
+                          enabled={showPhotos}
+                          onClick={(e) => setMiniPhotos(!miniPhotos)}
+                        />
+                      ) : (
+                        <IconZoomOut
+                          extraClasses="tw-flex-initial tw-align-center"
+                          size={4}
+                          paddingx={1}
+                          enabled={showPhotos}
+                          onClick={(e) => setMiniPhotos(!miniPhotos)}
+                          tooltip="Shrink Photos"
+                        />
+                      )}
+                    </div>
+
+                    {visiblePhotos.map((pd, idx) => {
+                      return (
+                        <SpeciesImage
+                          key={`species-img-${idx}`}
+                          {...pd}
+                          mini={miniPhotos}
+                          srcSize={"medium"}
+                          extraClasses={classNames({
+                            "tw--ml-96 tw-max-h-0": !showPhotos,
+                            "tw-ml-0 tw-max-h-full": showPhotos,
+                          })}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div
                 className={classNames(
                   "tw-text-indigo-700 tw-inset-1/2 tw-absolute tw--ml-16 tw--mt-16",
