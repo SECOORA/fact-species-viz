@@ -385,7 +385,7 @@ function SpeciesVizApp(props) {
         <GLMap
           idField="key"
           mapStyle={BaseStyles[basemapStyle].style}
-          mapHeight={700}
+          mapHeight={670}
           mapWidth={700}
           maxZoom={4}
           interactiveLayerIds={Object.keys(shownProjects)}
