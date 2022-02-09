@@ -579,51 +579,42 @@ function SpeciesVizApp(props) {
               https://secoora.org/fact/
             </a>
           </div>
-          <div className="tw-relative tw-mx-2 tw-group">
-            <div className="tw-p-1 tw-rounded-b group-hover:tw-bg-gray-100 group-hover:tw-shadow-sm">
-              <IconCog
-                extraClasses={classNames(
-                  "tw-text-gray-700 group-hover:tw-text-gray-500",
-                  { "tw-invisible": readOnly }
-                )}
-              />
-            </div>
-
-            <div
-              className="tw-hidden group-hover:tw-block tw-absolute tw-bg-gray-100 tw-p-2 tw-rounded-tl tw-rounded-tr tw-rounded-br"
-              style={{ bottom: "2em" }}
-            >
-              <div className="tw-text-xs">Basemap Style</div>
-              <div className="tw-flex tw-flex-row tw-gap-1">
-                {Object.keys(BaseStyles).map((bs, i) => {
-                  return (
-                    <div
-                      key={`bsswatch-${i}`}
-                      onClick={(e) => setBasemapStyle(bs)}
+          {!readOnly && (
+            <div className="tw-flex tw-flex-row tw-gap-2 tw-ml-6">
+              {Object.keys(BaseStyles).map((bs, i) => {
+                return (
+                  <div
+                    key={`bsswatch-${i}`}
+                    onClick={(e) => setBasemapStyle(bs)}
+                    className={classNames(
+                      "tw-rounded-md tw-has-tooltip tw-cursor-pointer tw-w-6",
+                      {
+                        // "tw-ring-2 tw-ring-indigo-500": bs === basemapStyle,
+                        // "tw-bg-gray-400 tw-shadow": bs === basemapStyle,
+                      }
+                    )}
+                  >
+                    <img
                       className={classNames(
-                        "tw-p-1 tw-rounded-md tw-has-tooltip tw-cursor-pointer tw-w-10",
+                        "tw-rounded-md tw-border tw-border-gray-500",
                         {
-                          "tw-bg-gray-400 tw-shadow": bs === basemapStyle,
+                          "tw-ring-2 tw-ring-indigo-500": bs === basemapStyle,
                         }
                       )}
-                    >
-                      <img
-                        className="tw-rounded-md tw-border tw-border-gray-500"
-                        src={BaseStyles[bs].thumbnail}
-                        alt={BaseStyles[bs].title}
-                      ></img>
-                      <span className="tw-tooltip tw-capitalize">
-                        {BaseStyles[bs].title}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
+                      src={BaseStyles[bs].thumbnail}
+                      alt={BaseStyles[bs].title}
+                    ></img>
+                    <span className="tw-tooltip tw-capitalize">
+                      {BaseStyles[bs].title}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
-          </div>
+          )}
           {shownProjectCodes.length > 0 && (
             <div
-              className="tw-inline tw-cursor-pointer"
+              className="tw-inline tw-cursor-pointer tw-ml-6"
               onClick={() => setShowCitations(shownProjectCodes)}
             >
               <div className="tw-inline tw-font-bold">Data Shown: </div>
@@ -637,7 +628,6 @@ function SpeciesVizApp(props) {
               })}
             </div>
           )}
-          &nbsp;
         </div>
       </div>
 
