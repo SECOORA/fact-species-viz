@@ -8,6 +8,9 @@ Sentry.init({
   dsn: "https://bd2f63b5e0774883ae1bbcef7ab404e0@sentry.srv.axds.co/13",
   // integrations: [new Integrations.BrowserTracing()],
   // tracesSampleRate: parseFloat(process.env.TRACES_SAMPLE_RATE) || 0.05,
+  denyUrls: [
+    '//localhost:'
+  ]
 });
 
 import SpeciesVizApp from "./speciesVizApp.js"
