@@ -68,11 +68,11 @@ const CitationModal = (props) => {
               )}
               <div className="">
                 <a
-                  href={`https://members.oceantrack.org/OTN/project?ccode=FACT.${sp}`}
+                  href={`https://secoora.org/fact/projects-species/projects/?project=FACT.${sp}`}
                   target="_blank"
                   className="tw-text-indigo-700"
                 >
-                  OTN Project Page
+                  Project Page
                 </a>
               </div>
             </div>
