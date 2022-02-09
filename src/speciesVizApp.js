@@ -50,8 +50,8 @@ function SpeciesVizApp(props) {
   const [readOnly, setReadOnly] = useState(false);      // removes interactive UI
   const [hoverData, setHoverData] = useState({});       // lat, lon, layers
   const [loading, setLoading] = useState([]);           // [layerKey]
-  const [miniPhotos, setMiniPhotos] = useState(false);  // makes species photos small/round
-  const [showPhotos, setShowPhotos] = useState(true);   // makes species photos shown or not
+  const [miniPhotos, setMiniPhotos] = useState((localStorage.getItem('atp-mini-photos') || 'false') === 'true');  // makes species photos small/round
+  const [showPhotos, setShowPhotos] = useState((localStorage.getItem('atp-show-photos') || 'true') === 'true');   // makes species photos shown or not
 
   const maxLevel = useMemo(() => {
     return Math.max(...Object.values(maxLevels));
@@ -71,6 +71,15 @@ function SpeciesVizApp(props) {
   useEffect(() => {
     localStorage.setItem('atp-layerData', JSON.stringify(layerData));
   }, [layerData])
+
+  useEffect(() => {
+    localStorage.setItem('atp-mini-photos', miniPhotos.toString());
+  }, [miniPhotos]);
+
+  useEffect(() => {
+    localStorage.setItem('atp-show-photos', showPhotos.toString());
+  }, [showPhotos]);
+
 
   //
   // get data on load
