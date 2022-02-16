@@ -103,14 +103,20 @@ async def process_atp_project(project_code: str, year: int, type: ATPType, force
 @app.post('/atp/PROCESS_DEFAULT')
 async def process_defaults(type: Optional[ATPType]=None, limit: Optional[str] = None, force: Optional[bool] = None):
     projects = [
+        'AMEELT',
         'BLKTP',
-        'FSUGG',
-        'FLKEYST',
-        'TQCS',
-        'COBCRP',
         'CGJACK',
+        'FBLTP',
+        'GANDRMISC',
+        'GANDRRD',
         'GADNRTT',
-        'SCDNRBTP',
+        'TQCS',
+        'WPAJ',
+        'WPCUB',
+        'WPKINGM',
+        'WPTTT',
+        'COBCRP',
+        'FLKEYST'
     ]
 
     if limit is not None:
