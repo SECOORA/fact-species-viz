@@ -25,10 +25,10 @@ const defaultLayerData = [
   {
     layerKey: "ooba",
     aphiaId: 105793,
-    year: 2017,
+    year: "all",
     project: "_ALL",
     month: "all",
-    palette: "viridis",
+    palette: "reds",
     type: "distribution",
   },
 ]; 
@@ -131,7 +131,8 @@ function SpeciesVizApp(props) {
     if (!storedLayerData || dataInventory.length === 0) {
       return;
     }
-    const validLayers = storedLayerData.filter(ld => {
+
+    const validFunc = (ld) => {
       const species = _.find(dataInventory, {aphiaId: ld.aphiaId});
       if (!species) { return false; }
 
@@ -145,26 +146,33 @@ function SpeciesVizApp(props) {
 
       // don't bother checking palette/type
       return true;
-    });
+    }
+
+    const validLayers = storedLayerData.filter(validFunc);
 
     console.info("Valid layer check", storedLayerData.length, "->", validLayers.length);
     console.debug(storedLayerData, validLayers);
 
     if (validLayers.length === 0) {
-      // create layer based on first available thing in data inventory
-      const [projectCode, projectData] = _.first(_.entries(dataInventory[0].byProject));
+      // is the defaultLayer valid with this inventory?
+      if (validFunc(defaultLayerData[0])) {
+        setLayerData(defaultLayerData);
+      } else {
+        // create layer based on first available thing in data inventory
+        const [projectCode, projectData] = _.first(_.entries(dataInventory[0].byProject));
 
-      setLayerData([
-        {
-          layerKey: "defo",
-          aphiaId: dataInventory[0].aphiaId,
-          year: projectData.years[0].year,
-          project: projectCode,
-          month: "all",
-          palette: "viridis",
-          type: "distribution",
-        },
-      ]);
+        setLayerData([
+          {
+            layerKey: "defo",
+            aphiaId: dataInventory[0].aphiaId,
+            year: projectData.years[0].year,
+            project: projectCode,
+            month: "all",
+            palette: "viridis",
+            type: "distribution",
+          },
+        ]);
+      }
     } else {
       setLayerData(validLayers);
     }
