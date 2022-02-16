@@ -91,8 +91,7 @@ const LayerEditor = (props) => {
     }
 
     // should filter by project too
-    return invItem.byProject[props.currentLayer.project].years.map(yd => yd.year);
-
+    return (invItem.byProject[props.currentLayer.project]?.years || []).map(yd => yd.year);
   }, [props.dataInventory, props.currentLayer.aphiaId, props.currentLayer.project]);
 
   const availMonths = useMemo(() => {
@@ -103,7 +102,10 @@ const LayerEditor = (props) => {
     }
 
     // should filter by project too
-    const yearData = _.find(invItem.byProject[props.currentLayer.project].years, (v) => v.year === props.currentLayer.year);
+    const yearData = _.find(
+      invItem.byProject[props.currentLayer.project]?.years || [],
+      (v) => v.year === props.currentLayer.year
+    );
     return yearData?.months;
   }, [props.dataInventory, props.currentLayer.aphiaId, props.currentLayer.year, props.currentLayer.project]);
 

@@ -17,7 +17,12 @@ import SpeciesVizApp from "./speciesVizApp.js"
 
 function ErrorFallback({ error }) {
   return (
-    <div className="tw-relative tw-h-full tw-w-full">
+    <div
+      className="tw-relative tw-h-full tw-w-full"
+      style={{
+        minHeight: "677px"
+      }}
+    >
       <div className="tw-h-full tw-w-full tw-absolute tw-flex tw-items-center tw-justify-center tw-bg-gray-500 tw-bg-opacity-50 tw-top-0 tw-left-0">
         <div
           role="alert"

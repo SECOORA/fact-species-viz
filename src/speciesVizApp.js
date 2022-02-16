@@ -17,8 +17,21 @@ import PaletteSwatch from "./paletteSwatch.js";
 import BaseStyles from "./baseStyles.js";
 import {IconCog, IconZoom, IconZoomOut, IconEye, IconEyeOff, IconImage} from "./icon.js";
 import SpeciesImage from "./speciesImage.js";
+import { accessibilityOverscanIndicesGetter } from "react-virtualized";
 
 const getRandomItem = (iterable) => iterable[Math.floor(Math.random() * iterable.length)]
+
+const defaultLayerData = [
+  {
+    layerKey: "ooba",
+    aphiaId: 105793,
+    year: 2017,
+    project: "_ALL",
+    month: "all",
+    palette: "viridis",
+    type: "distribution",
+  },
+]; 
 
 function SpeciesVizApp(props) {
 
@@ -34,17 +47,7 @@ function SpeciesVizApp(props) {
   const [maxLevels, setMaxLevels] = useState({}); // layerKey -> maximum
   const [shownProjects, setShownProjects] = useState({}); // layerKey -> [project codes]
   const [speciesPhotos, setSpeciesPhotos] = useState({}); // aphiaID -> {urls/media metadata}
-  const [layerData, setLayerData] = useState(storedLayerData || [
-    {
-      layerKey: "ooba",
-      aphiaId: 105793,
-      year: 2017,
-      project: "_ALL",
-      month: 'all',
-      palette: "viridis",
-      type: "distribution",
-    }
-  ]);
+  const [layerData, setLayerData] = useState(storedLayerData || defaultLayerData);
   const [activeIdx, setActiveIdx] = useState(0);
   const [showCitations, setShowCitations] = useState([]);   // list of project codes
   const [readOnly, setReadOnly] = useState(false);      // removes interactive UI
@@ -121,6 +124,53 @@ function SpeciesVizApp(props) {
     }
     getPhotos();
   }, []);
+
+  // validate any stored layers - if inventory changes (ie projects removed) this can affect the whole app
+  // wait until data inventory loads
+  useEffect(() => {
+    if (!storedLayerData || dataInventory.length === 0) {
+      return;
+    }
+    const validLayers = storedLayerData.filter(ld => {
+      const species = _.find(dataInventory, {aphiaId: ld.aphiaId});
+      if (!species) { return false; }
+
+      const project = species.byProject[ld.project];
+      if (!project) { return false; }
+
+      const year = _.find(project.years, {year: ld.year});
+      if (!year) { return false; }
+
+      if (!(ld.month === 'all' || year.months.indexOf(ld.month) !== -1)) { return false; }
+
+      // don't bother checking palette/type
+      return true;
+    });
+
+    console.info("Valid layer check", storedLayerData.length, "->", validLayers.length);
+    console.debug(storedLayerData, validLayers);
+
+    if (validLayers.length === 0) {
+      // create layer based on first available thing in data inventory
+      const [projectCode, projectData] = _.first(_.entries(dataInventory[0].byProject));
+
+      setLayerData([
+        {
+          layerKey: "defo",
+          aphiaId: dataInventory[0].aphiaId,
+          year: projectData.years[0].year,
+          project: projectCode,
+          month: "all",
+          palette: "viridis",
+          type: "distribution",
+        },
+      ]);
+    } else {
+      setLayerData(validLayers);
+    }
+
+
+  }, [dataInventory]);
 
   const visiblePhotos = useMemo(() => {
     const aphiaIds = new Set(layerData.map(ld => ld.aphiaId)),
@@ -218,6 +268,22 @@ function SpeciesVizApp(props) {
       return Array.from(lSet);
     })
   }
+
+  // if we change loading layers mid load (aka last stored layers were invalid and we picked a default),
+  // need to remove the loading state for the old layers
+  useEffect(() => {
+    if (!loading || loading.length === 0) {
+      return;
+    }
+
+    const curLayerKeys = layerData.map(ld => ld.key);
+    setLoading(curLoading => {
+      const lSet = new Set(curLoading),
+        combined = new Set([...curLayerKeys].filter(x => lSet.has(x)));
+
+      return Array.from(combined);
+    })
+  }, [layerData, loading])
 
   /**
    * Moves the layer indicated by index in the direction given.
