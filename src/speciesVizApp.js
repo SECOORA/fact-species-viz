@@ -109,16 +109,16 @@ function SpeciesVizApp(props) {
       const response = await axios.get(
         `${
           process.env.MEDIA_URL ||
-          "https://secoora.org/wp-json/wp/v2/media?per_page=100&search=aphiaID&_fields=caption,media_details"
+          "https://secoora.org/wp-json/wp/v2/media?per_page=100&search=aphiaID&_fields=description,caption,media_details"
         }`
       );
 
       const raphiaId = /aphiaID:\s?(\d+)/
       const photos = Object.fromEntries(response.data.map(e => {
-        if (!e.caption.rendered) {
+        if (!e.description.rendered) {
           return null;
         }
-        const aphiaIDMatch = e.caption.rendered.match(raphiaId);
+        const aphiaIDMatch = e.description.rendered.match(raphiaId);
         if (!aphiaIDMatch || aphiaIDMatch.length < 2) {
           return null;
         }
