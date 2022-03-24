@@ -115,10 +115,17 @@ function SpeciesVizApp(props) {
 
       const raphiaId = /aphiaID:\s?(\d+)/
       const photos = Object.fromEntries(response.data.map(e => {
-        const aphiaID = e.caption.rendered.match(raphiaId)[1];
+        if (!e.caption.rendered) {
+          return null;
+        }
+        const aphiaIDMatch = e.caption.rendered.match(raphiaId);
+        if (!aphiaIDMatch || aphiaIDMatch.length < 2) {
+          return null;
+        }
+        const aphiaID = aphiaIDMatch[1];
 
         return [aphiaID, e.media_details];
-      }));
+      }).filter(pd => pd !== null));
 
       setSpeciesPhotos(photos);
     }
@@ -150,8 +157,8 @@ function SpeciesVizApp(props) {
 
     const validLayers = storedLayerData.filter(validFunc);
 
-    console.info("Valid layer check", storedLayerData.length, "->", validLayers.length);
-    console.debug(storedLayerData, validLayers);
+    // console.info("Valid layer check", storedLayerData.length, "->", validLayers.length);
+    // console.debug(storedLayerData, validLayers);
 
     if (validLayers.length === 0) {
       // is the defaultLayer valid with this inventory?
