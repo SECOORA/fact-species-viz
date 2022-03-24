@@ -3,10 +3,8 @@ FROM continuumio/miniconda3:4.9.2
 LABEL MAINTAINER="Dave Foster <dave@axds.co>"
 
 COPY environment.yml /tmp
-COPY requirements-pip-manual.txt /tmp
 RUN --mount=type=cache,target=/opt/conda/pkgs conda update -n base -y conda && conda config --add channels conda-forge && conda install --yes -q mamba && \
 	mamba env create -f /tmp/environment.yml && \
-	/opt/conda/envs/fact-species-viz/bin/pip install -r /tmp/requirements-pip-manual.txt && \
 	mamba clean --all --yes
 
 RUN useradd -ms /bin/bash atp
