@@ -107,8 +107,6 @@ async def process_defaults(type: Optional[ATPType]=None, limit: Optional[str] = 
         'BLKTP',
         'CGJACK',
         'FBLTP',
-        'GANDRMISC',
-        'GANDRRD',
         'GADNRTT',
         'TQCS',
         'WPAJ',
