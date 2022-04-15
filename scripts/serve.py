@@ -137,7 +137,7 @@ async def process_defaults(type: Optional[ATPType]=None, limit: Optional[str] = 
         lprojects = limit.split(",")
         projects = [p for p in projects if p in lprojects]
 
-    years = list(range(2009, 2022))
+    years = list(range(2009, 2023))
 
     if type is not None:
         types = [
