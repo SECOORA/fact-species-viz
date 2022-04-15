@@ -116,7 +116,23 @@ async def process_defaults(type: Optional[ATPType]=None, limit: Optional[str] = 
         'WPKINGM',
         'WPTTT',
         'COBCRP',
-        'FLKEYST'
+        'FLKEYST',
+        'CZSBUL',
+        'DTNSST',
+        'ECBMIT',
+        'ECBNEAR',
+        'FSUGG',
+        'GADNRMISC',
+        'GADNRRD',
+        'MULUCF',
+        'NOAACONCH',
+        'SCSOFL',
+        'SRFCE',
+        'TQCSPP',
+        'TQLMB',
+        'UGAACI',
+        'V2LUMI',
+        'V2LURB'
     ]
 
     if limit is not None:
