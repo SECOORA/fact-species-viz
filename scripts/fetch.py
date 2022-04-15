@@ -164,36 +164,61 @@ def get_species_for_df(df: pd.DataFrame, catalog_col: str='relatedcatalogitem', 
 def get_from_graphql(trackercode: str, year: str, path: str):
     assert CONFIG.rw_auth_token != "you_must_set"
 
-    logger.info("get_from_graphql: retrieving list of detection zips")
+    # query = """
+    # query FindDetections($trackercode: String, $year: String = "") {
+    #     organization(id: 2563073) {
+    #         name
+    #         projects(search: $trackercode) {
+    #             nodes {
+    #                 name
+    #                 folders(search: "Your tag detections") {
+    #                     nodes {
+    #                         files(search: $year) {
+    #                             nodes {
+    #                                 id,
+    #                                 name
+    #                             }
+    #                         }
+    #                     }
+    #                 }
+    #             }
+    #         }
+    #     }
+    # }
+    # """
+
+    # r = requests.post(
+    #     CONFIG.rw_gql_url,
+    #     json={
+    #         'operationName': None,
+    #         'query': query,
+    #         'variables': {'trackercode': trackercode, 'year': str(year)}
+    #     },
+    #     headers={
+    #         'Authorization': f'Bearer {CONFIG.rw_auth_token}'
+    #     }
+    # )
+
+    logger.info("get_from_graphql: finding project id")
     query = """
-    query FindDetections($trackercode: String, $year: String = "") {
+    query FindProject($trackercode: String) {
         organization(id: 2563073) {
             name
             projects(search: $trackercode) {
                 nodes {
-                    name
-                    folders(search: "Your tag detections") {
-                        nodes {
-                            files(search: $year) {
-                                nodes {
-                                    id,
-                                    name
-                                }
-                            }
-                        }
-                    }
+                    name,
+                    id
                 }
             }
         }
     }
     """
-
     r = requests.post(
         CONFIG.rw_gql_url,
         json={
             'operationName': None,
             'query': query,
-            'variables': {'trackercode': trackercode, 'year': str(year)}
+            'variables': {'trackercode': trackercode}
         },
         headers={
             'Authorization': f'Bearer {CONFIG.rw_auth_token}'
@@ -207,11 +232,79 @@ def get_from_graphql(trackercode: str, year: str, path: str):
     if len(all_projects) > 1:
         raise ValueError(f"Too many projects returned from graphql query ({len(all_projects)}): {','.join((p['name'] for p in all_projects))}")
 
-    folder_nodes = all_projects[0]['folders']['nodes']
+    project_id = all_projects[0]['id']
+
+    logger.info("get_from_graphql: finding folders in project %d", project_id)
+
+    # new query for folders in that project
+    query = """
+    query FindFoldersInProject($projectId: Float!) {
+        project(id: $projectId) {
+            id
+            folders(search: "Your tag detections") {
+                totalCount
+                nodes {
+                    id,
+                    name
+                }
+            }
+        }
+    }
+    """
+    r = requests.post(
+        CONFIG.rw_gql_url,
+        json={
+            'operationName': None,
+            'query': query,
+            'variables': {'projectId': project_id}
+        },
+        headers={
+            'Authorization': f'Bearer {CONFIG.rw_auth_token}'
+        }
+    )
+
+    if r.status_code != 200:
+        raise ValueError(f"get_from_graphql returned error ({r.status_code}):\n {pformat(r.text)}")
+
+    folder_nodes = r.json()['data']['project']['folders']['nodes']
+
     if len(folder_nodes) > 1:
         raise ValueError(f"Too many folders returned from graphql query ({len(folder_nodes)})")
 
-    nodes = [n for n in folder_nodes[0]['files']['nodes']]
+    folder_id = folder_nodes[0]['id']
+
+    logger.info("get_from_graphql: finding files in folder %d", folder_id)
+
+    # new query for files in that folder
+    query = """
+    query FindFileInFolder($folderId: Float!, $year : String = "") {
+        folder(id: $folderId) {
+            files(search: $year) {
+                nodes {
+                    id,
+                    name,
+                    deleted
+                }
+            }
+        }
+    }
+    """
+    r = requests.post(
+        CONFIG.rw_gql_url,
+        json={
+            'operationName': None,
+            'query': query,
+            'variables': {'folderId': folder_id, 'year': str(year)}
+        },
+        headers={
+            'Authorization': f'Bearer {CONFIG.rw_auth_token}'
+        }
+    )
+
+    if r.status_code != 200:
+        raise ValueError(f"get_from_graphql returned error ({r.status_code}):\n {pformat(r.text)}")
+
+    nodes = [n for n in r.json()['data']['folder']['files']['nodes'] if n['deleted'] == None]
     if len(nodes) > 1:
         raise ValueError(f"Too many files returned from graphql query ({len(nodes)}): {','.join((n['name'] for n in nodes))}")
 
@@ -252,6 +345,14 @@ def get_from_graphql(trackercode: str, year: str, path: str):
             'tagname': 'fieldnumber'
         }
     )
+
+    len_before = len(df)
+    logger.info("get_from_graphql: filtering out NaN catalognumber records, length before %d", len_before)
+
+    df = df[~df['catalognumber'].isna()]
+
+    len_after = len(df)
+    logger.info("get_from_graphql: NaN filter finished, length after %d (-%d)", len_after, len_before - len_after)
 
     # get species info, attach to df
     df = get_species_for_df(df, catalog_col="catalognumber", merge_kwargs={'suffixes': [None, '_y']})
