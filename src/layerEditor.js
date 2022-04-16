@@ -251,6 +251,7 @@ const LayerEditor = (props) => {
           2019,
           2020,
           2021,
+          2022,
           "all",
         ]}
         labels={[
@@ -267,6 +268,7 @@ const LayerEditor = (props) => {
           2019,
           2020,
           2021,
+          2022,
           "All",
         ]}
         enabledItems={[...availYears, "all"]}
