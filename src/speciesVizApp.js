@@ -15,7 +15,14 @@ import Legend from "./legend.js";
 import Palettes from "./palettes.js";
 import PaletteSwatch from "./paletteSwatch.js";
 import BaseStyles from "./baseStyles.js";
-import {IconCog, IconZoom, IconZoomOut, IconEye, IconEyeOff, IconImage} from "./icon.js";
+import {
+  IconSpeakerphone,
+  IconZoom,
+  IconZoomOut,
+  IconEye,
+  IconEyeOff,
+  IconImage,
+} from "./icon.js";
 import SpeciesImage from "./speciesImage.js";
 import { accessibilityOverscanIndicesGetter } from "react-virtualized";
 
@@ -657,22 +664,37 @@ function SpeciesVizApp(props) {
         </div>
       </div>
 
-      <div className="tw-bg-gray-300 tw-border-b tw-border-gray-600 tw-text-sm tw-py-2 tw-px-2 tw-relative">
-        <div className="tw-flex tw-items-center">
+      <div className="tw-bg-gray-300 tw-border-b tw-border-gray-600 tw-text-sm tw-px-2 tw-relative">
+        <div className="tw-flex tw-items-stretch">
           <img
             className="tw-w-16 tw-absolute tw-bottom-0 tw-mb-2 tw-border tw-border-gray-300 tw-rounded-md tw-shadow tw-cursor-pointer"
             src="https://secoora.org/wp-content/uploads/2017/06/fact_logo.jpg"
             alt="FACT Logo"
             onClick={() => setReadOnly(!readOnly)}
           />
-          <div className="tw-ml-16">
+          <div className="tw-ml-16 tw-py-2">
             <span className="tw-ml-2 tw-font-bold">FACT DaViT</span> &middot;{" "}
             <a href="https://secoora.org/fact/" target="_blank">
               https://secoora.org/fact/
             </a>
           </div>
           {!readOnly && (
-            <div className="tw-flex tw-flex-row tw-gap-2 tw-ml-6">
+            <div className="tw-bg-indigo-600 tw-text-indigo-200 tw-ml-6 tw-font-semibold hover:tw-bg-indigo-700 hover:tw-text-indigo-300">
+              <a
+                className="tw-py-2 tw-px-2 tw-block"
+                href="mailto:data@thefactnetwork.org?subject=FACT DaViT Feedback"
+              >
+                <IconSpeakerphone
+                  size={4}
+                  paddingx={1}
+                  extraClasses="tw-inline-block"
+                />
+                Feedback
+              </a>
+            </div>
+          )}
+          {!readOnly && (
+            <div className="tw-flex tw-flex-row tw-gap-2 tw-ml-6 tw-py-2">
               {Object.keys(BaseStyles).map((bs, i) => {
                 return (
                   <div
@@ -706,7 +728,7 @@ function SpeciesVizApp(props) {
           )}
           {shownProjectCodes.length > 0 && (
             <div
-              className="tw-inline tw-cursor-pointer tw-ml-6"
+              className="tw-inline tw-cursor-pointer tw-ml-6 tw-py-2"
               onClick={() => setShowCitations(shownProjectCodes)}
             >
               <div className="tw-inline tw-font-bold">Data Shown: </div>
