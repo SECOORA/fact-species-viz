@@ -230,7 +230,15 @@ def get_from_graphql(trackercode: str, year: str, path: str):
 
     all_projects = r.json()['data']['organization']['projects']['nodes']
     if len(all_projects) > 1:
-        raise ValueError(f"Too many projects returned from graphql query ({len(all_projects)}): {','.join((p['name'] for p in all_projects))}")
+        # this might happen if you have the array and tag projects in RW - they are usually the same prefix and we can't search for word boundaries
+        # filter regex clientside
+        rprojectname = re.compile(f"{trackercode}\\b")
+        filter_projects = [p for p in all_projects if rprojectname.match(p['name'])]
+        if len(filter_projects) == 1:
+            logger.info("get_from_graphql: multiple matching projects for project '%s', found prefix match '%s...'", trackercode, filter_projects[0]['name'][0:20])
+            all_projects = filter_projects
+        else:
+            raise ValueError(f"Too many projects returned from graphql query ({len(all_projects)}): {','.join((p['name'] for p in all_projects))}")
 
     project_id = all_projects[0]['id']
 
