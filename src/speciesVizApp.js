@@ -90,8 +90,10 @@ function SpeciesVizApp(props) {
 
   useEffect(() => {
     async function getInventory() {
-      const response = await axios.get(`${process.env.DATA_URL}/atp/inventory`);
-      setDataInventory(response.data);
+      const response = await axios.get(`${process.env.DATA_URL}/atp/inventory`),
+        inv = _.sortBy(response.data, "speciesCommonName");
+
+      setDataInventory(inv);
     }
     getInventory();
   }, []);
