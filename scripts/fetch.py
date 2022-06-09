@@ -312,7 +312,7 @@ def get_from_graphql(trackercode: str, year: str, path: str):
     if r.status_code != 200:
         raise ValueError(f"get_from_graphql returned error ({r.status_code}):\n {pformat(r.text)}")
 
-    nodes = [n for n in r.json()['data']['folder']['files']['nodes'] if n['deleted'] == None]
+    nodes = [n for n in r.json()['data']['folder']['files']['nodes'] if n['deleted'] == None and n['name'].endswith('.zip')]
     if len(nodes) > 1:
         raise ValueError(f"Too many files returned from graphql query ({len(nodes)}): {','.join((n['name'] for n in nodes))}")
 
