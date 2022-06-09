@@ -3,6 +3,7 @@ from typing import List, Optional, Union
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from scripts.fetch import get_project_active_years_from_graphql
 
 from . import tasks
 from .cache import get_projects_for_species, read_cache, get_species_ids, get_species_months, get_species_years, get_data_inventory, get_citations
@@ -98,6 +99,40 @@ async def process_atp_project(project_code: str, year: int, type: ATPType, force
 
     return {'status': 'processing', 'args': kwargs}
 
+
+@app.post('/atp/{project_code}')
+async def process_atp_project_all_years(project_code: str, type: Optional[ATPType]=None, force: Optional[bool]=None):
+    """
+    Queues multiple processing jobs for a project, for each active year.
+
+    Active years are determined by a RW graphql query.
+    """
+    years = get_project_active_years_from_graphql(project_code)
+    if type is not None:
+        types = [
+            type
+        ]
+    else:
+        types = [
+            ATPType.range,
+            ATPType.distribution
+        ]
+
+    ret = []
+
+    for y in years:
+        for t in types:
+            kwargs = {
+                'project_code': project_code,
+                'year': y,
+                'type': t.value,
+                'force': force or False
+            }
+
+            tasks.run_atp_process.apply_async(kwargs=kwargs)
+            ret.append(kwargs)
+
+    return {'status': 'processing', 'count': len(ret), 'args': ret}
 
 
 @app.post('/atp/PROCESS_DEFAULT')
