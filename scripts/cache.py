@@ -116,6 +116,21 @@ def get_projects_for_species(aphia_id: int) -> Sequence[str]:
     return sorted(ret)
 
 
+def get_species_for_project(project_code: str) -> Sequence[int]:
+    """
+    Gets a list of species AphiaIDs associated with a project.
+    """
+    assert r
+    
+    v = r.keys(f"data:*:*:*:*:{project_code}")
+    ret = set()
+    for vv in v:
+        _, aphia_id_str, _, _, _, _ = vv.decode('utf-8').split(':')
+        ret.add(int(aphia_id_str))
+
+    return sorted(ret)
+
+
 def get_data_inventory() -> Sequence[Any]:
     """
     Gets a data inventory for the entire frontend to be seeded with.

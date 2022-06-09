@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 from scripts.fetch import get_project_active_years_from_graphql
 
 from . import tasks
-from .cache import get_projects_for_species, read_cache, get_species_ids, get_species_months, get_species_years, get_data_inventory, get_citations
+from .cache import get_projects_for_species, read_cache, get_species_ids, get_species_months, get_species_years, get_data_inventory, get_citations, get_species_for_project
 from .log import logger
 from .utils import ATPType, get_atp_cache_key
 
@@ -197,6 +197,79 @@ async def process_defaults(type: Optional[ATPType]=None, limit: Optional[str] = 
                 }
 
                 tasks.run_atp_process.apply_async(kwargs=kwargs)
+                ret.append(kwargs)
+
+    return {'status': 'processing', 'count': len(ret), 'args': ret}
+
+
+
+@app.post('/atp/process_all_for_project/{project_code}')
+async def process_all_for_project(project_code: str, type: Optional[ATPType]=None, limit_species: Optional[List[int]]=Query(None)):
+    """
+    Queues jobs that process:
+    - for each species in specified project:
+        - all years for species (all projects)
+        - all years for species (this project)
+        - each year for species (all projects)
+
+    Each year for species for a project is done first, elsewhere:
+    - /atp/PROCESS_DEFAULT_ALLS
+    - /atp/{project_code}?type
+    - /atp/{project_code}/{type}/{year}
+
+    One of the above should be done first before this endpoint. Make sure all jobs are finished first!
+    """
+    if type is not None:
+        types = [
+            type
+        ]
+    else:
+        types = [
+            ATPType.range,
+            ATPType.distribution
+        ]
+
+    ret = []
+
+    # pull list of species for project
+    aphia_ids = get_species_for_project(project_code)
+
+    if limit_species is not None:
+        aphia_ids = list(set(aphia_ids) & set(limit_species))
+
+    for aphia_id in aphia_ids:
+
+        # queue all years for the species (all projects)
+        for t in types:
+            kwargs = {
+                'species_aphia_id': aphia_id,
+                'type': t.value if t else None
+            }
+            tasks.run_atp_process_all.apply_async(kwargs=kwargs)
+            ret.append(kwargs)
+
+        # queue all years for a species, by this project
+        for t in types:
+            kwargs = {
+                'species_aphia_id': aphia_id,
+                'type': t.value if t else None,
+                'trackercode': project_code
+            }
+            tasks.run_atp_process_all.apply_async(kwargs=kwargs)
+            ret.append(kwargs)
+
+        # get all years this species has data for
+        years = get_species_years(aphia_id)
+
+        # queue each year for a species (all projects)
+        for t in types:
+            for y in years:
+                kwargs = {
+                    'species_aphia_id': aphia_id,
+                    'type': t.value if t else None,
+                    'year': y
+                }
+                tasks.run_atp_process_all.apply_async(kwargs=kwargs)
                 ret.append(kwargs)
 
     return {'status': 'processing', 'count': len(ret), 'args': ret}
