@@ -1158,7 +1158,7 @@ def get_project_metadata(project_code: str, force: bool=False) -> Dict:
         with saved.open() as f:
             data = json.load(f)
     else:
-        r = requests.get("https://members.devel.oceantrack.org/geoserver/otnunit/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=otnunit:otn_resources_metadata&outputFormat=application/json&CQL_FILTER=seriescode%20=%20%27FACT%27")
+        r = requests.get("https://members.oceantrack.org/geoserver/otn/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=otn:otn_resources_metadata&outputFormat=application%2Fjson&CQL_FILTER=seriescode%20=%20%27FACT%27")
         r.raise_for_status()
 
         raw_data = r.json()
