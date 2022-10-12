@@ -296,9 +296,21 @@ const LayerEditor = (props) => {
         items={[...Array(12).keys(), "all"].map((m) =>
           m !== "all" ? m + 1 : m
         )}
-        labels={[...Array(12).keys(), "all"].map((m) =>
-          m !== "all" ? m + 1 : "All"
-        )}
+        labels={[
+          "Jan",
+          "Feb",
+          "Mar",
+          "Apr",
+          "May",
+          "Jun",
+          "Jul",
+          "Aug",
+          "Sep",
+          "Oct",
+          "Nov",
+          "Dec",
+          "All",
+        ]}
         enabledItems={[...(availMonths || []), "all"]}
         onClick={(v) => _updateLayer({ month: v })}
         curVal={props.currentLayer.month}
@@ -322,15 +334,18 @@ const LayerEditor = (props) => {
       />
 
       <div className="tw-flex tw-mx-2 tw-my-4 tw-items-center">
-
         <div className="tw-has-tooltip">
-          <IconQuestion extraClasses={"tw-text-gray-600 tw-pr-2 tw-pl-0"} size={5} onClick={e => window.location.hash = "at-120450"} />
+          <IconQuestion
+            extraClasses={"tw-text-gray-600 tw-pr-2 tw-pl-0"}
+            size={5}
+            onClick={(e) => (window.location.hash = "at-120450")}
+          />
           <div className="tw-tooltip tw-text-black tw-font-normal">
-            <span className="tw-font-semibold">Distribution</span>: Geographic area where individuals from a population
-            occur.
+            <span className="tw-font-semibold">Distribution</span>: Geographic
+            area where individuals from a population occur.
             <br />
-            <span className="tw-font-semibold">Range</span>: Geographic limits in which a species (or population)
-            exists.
+            <span className="tw-font-semibold">Range</span>: Geographic limits
+            in which a species (or population) exists.
           </div>
         </div>
 
@@ -364,7 +379,6 @@ const LayerEditor = (props) => {
         >
           <div className="tw-flex tw-leading-5 tw-items-center">Range</div>
         </button>
-
       </div>
 
       <hr className="tw-my-2" />
@@ -416,10 +430,13 @@ const LayerEditor = (props) => {
 
             <div className="tw-absolute tw-right-0 tw-h-full tw-top-0 tw-text-sm">
               <label
-                className={classNames("tw-inline-flex tw-items-center tw-font-normal", {
-                  "tw-cursor-pointer": canInvertPalette,
-                  "tw-cursor-not-allowed": !canInvertPalette,
-                })}
+                className={classNames(
+                  "tw-inline-flex tw-items-center tw-font-normal",
+                  {
+                    "tw-cursor-pointer": canInvertPalette,
+                    "tw-cursor-not-allowed": !canInvertPalette,
+                  }
+                )}
               >
                 <input
                   type="checkbox"
