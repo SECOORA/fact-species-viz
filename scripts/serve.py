@@ -134,7 +134,28 @@ async def process_defaults(type: Optional[ATPType]=None, limit: Optional[str] = 
         'SSUEEL',
         'TBHOG',
         'KSCETM',
-        'MMFT'
+        'MMFT',
+        # new approvals added nov 2022 data push
+        'ABCOWN',
+        'APFISH',
+        'COBGOM',
+        'COBREPRO',
+        'FIUARBT',
+        'FNEMO',
+        'FSCAPE',
+        'GGINEC',
+        'GGINWC',
+        'HBSERC',
+        'JBIM',
+        'JUKSC',
+        'MBSHHN',
+        'MMFSTS',
+        'NCCOBIA',
+        'RSTSNCT',
+        'SLFWI',
+        'UMASSHK',
+        'USNKSC',
+        'VIMCOB'
     ]
 
     if limit is not None:
