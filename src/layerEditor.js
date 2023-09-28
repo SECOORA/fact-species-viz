@@ -333,12 +333,11 @@ const LayerEditor = (props) => {
         extraClasses="tw-mb-2"
       />
 
-      <div className="tw-flex tw-mx-2 tw-my-4 tw-items-center">
-        <div className="tw-has-tooltip">
+      <div className="tw-flex tw-my-4 tw-items-stretch">
+        <div className="tw-has-tooltip tw-self-center">
           <IconQuestion
             extraClasses={"tw-text-gray-600 tw-pr-2 tw-pl-0"}
             size={5}
-            onClick={(e) => (window.location.hash = "at-120450")}
           />
           <div className="tw-tooltip tw-text-black tw-font-normal">
             <span className="tw-font-semibold">Distribution</span>: Geographic
@@ -359,10 +358,13 @@ const LayerEditor = (props) => {
                 props.currentLayer.type !== "distribution",
             }
           )}
+          style={{
+            width: "calc((16em - 28px) / 2)"
+          }}
           onClick={() => _updateLayer({ type: "distribution" })}
         >
           <div className="tw-flex tw-leading-5 tw-items-center">
-            Distribution
+            Distribution within the network
           </div>
         </button>
         <button
@@ -375,9 +377,12 @@ const LayerEditor = (props) => {
                 props.currentLayer.type !== "range",
             }
           )}
+          style={{
+            width: "calc((16em - 28px) / 2)"
+          }}
           onClick={() => _updateLayer({ type: "range" })}
         >
-          <div className="tw-flex tw-leading-5 tw-items-center">Range</div>
+          <div className="tw-flex tw-leading-5 tw-items-center">Range within the network</div>
         </button>
       </div>
 
