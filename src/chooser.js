@@ -1,12 +1,13 @@
 import React, {useState, useMemo, useEffect} from "react";
 import ReactDOM from "react-dom";
 import classNames from "classnames";
+import Slub from "./slub";
 
 function Chooser(props) {
 
   return (
     <div className={classNames(props.extraClasses)}>
-      <div className="tw-text-sm">{props.label}</div>
+      <Slub>{props.label}</Slub>
       <div className="tw-flex tw-items-center">
 
         {props.before}

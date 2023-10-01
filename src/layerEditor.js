@@ -1,10 +1,12 @@
 import React, { useState, useMemo, useEffect } from "react";
 import ReactDOM from "react-dom";
+import PropTypes from 'prop-types';
 import _ from 'lodash';
 
 import Chooser from "./chooser.js";
 import Palettes from "./palettes.js";
 import {IconLeft, IconQuestion, IconRight, IconZoom} from "./icon.js";
+import Slub from "./slub";
 import classNames from "classnames";
 import PaletteSwatch from "./paletteSwatch.js";
 
@@ -389,7 +391,7 @@ const LayerEditor = (props) => {
       <hr className="tw-my-2" />
 
       <div className="tw-mb-2">
-        <div className="tw-text-sm tw-mb-1">Appearance</div>
+        <Slub>Appearance</Slub>
 
         <div className="tw-relative">
           <div className="">
@@ -485,15 +487,35 @@ const LayerEditor = (props) => {
 
       <hr className="tw-my-2" />
 
+      <div className="tw-text-sm">
+        <label
+          className={classNames(
+            "tw-inline-flex tw-items-center tw-font-normal",
+          )}
+        >
+          <input
+            type="checkbox"
+            className="tw-form-checkbox tw-h-5 tw-w-5 tw-text-gray-600"
+            checked={props.showRecCoverage}
+            onChange={e => props.onToggleRecCoverage(e.target.checked)}
+          />
+          <span className={classNames("tw-mx-2 tw-text-gray-700")}>
+            Show Receiver Coverage
+          </span>
+        </label>
+      </div>
+
+      <hr className="tw-my-2" />
+
       <div>
-        <div className="tw-text-sm tw-mb-1 tw-flex">
+        <Slub extraClasses={"tw-flex"}>
           Citations
           <IconZoom
             onClick={() => props.onShowCitations(speciesProjects.slice(1))}
             size={4}
             extraClasses="tw-flex-shrink"
           />
-        </div>
+        </Slub>
 
         {speciesProjects.slice(1).map((sp) => {
           return (
@@ -514,5 +536,15 @@ const LayerEditor = (props) => {
     </div>
   );
 }
+
+LayerEditor.propTypes = {
+	notifyUpdate: PropTypes.func,
+  currentLayer: PropTypes.object,
+	dataInventory: PropTypes.array,
+  citations: PropTypes.object,
+	onShowCitations: PropTypes.func,
+	showRecCoverage: PropTypes.bool,
+	onToggleRecCoverage: PropTypes.func,
+};
 
 export default LayerEditor;
