@@ -3,7 +3,7 @@ import ReactDOM from "react-dom";
 import axios from "axios";
 import _ from 'lodash';
 import classNames from "classnames";
-import { Popup } from "react-map-gl";
+import { Popup, Source, Layer } from "react-map-gl";
 import { Oval } from "react-loading-icons";
 
 import GLMap from "./glmap.js";
@@ -24,7 +24,7 @@ import {
   IconImage,
 } from "./icon.js";
 import SpeciesImage from "./speciesImage.js";
-import { accessibilityOverscanIndicesGetter } from "react-virtualized";
+import rec from "./assets/rec.geojson";
 
 const getRandomItem = (iterable) => iterable[Math.floor(Math.random() * iterable.length)]
 
@@ -62,6 +62,7 @@ function SpeciesVizApp(props) {
   const [loading, setLoading] = useState([]);           // [layerKey]
   const [miniPhotos, setMiniPhotos] = useState((localStorage.getItem('atp-mini-photos') || 'false') === 'true');  // makes species photos small/round
   const [showPhotos, setShowPhotos] = useState((localStorage.getItem('atp-show-photos') || 'true') === 'true');   // makes species photos shown or not
+  const [showRecCoverage, setShowRecCoverage] = useState((localStorage.getItem('atp-show-rec-coverage') || 'true') === 'true'); // show receiver coverage
 
   const maxLevel = useMemo(() => {
     return Math.max(...Object.values(maxLevels));
@@ -90,6 +91,9 @@ function SpeciesVizApp(props) {
     localStorage.setItem('atp-show-photos', showPhotos.toString());
   }, [showPhotos]);
 
+  useEffect(() => {
+    localStorage.setItem('atp-show-rec-coverage', showRecCoverage.toString());
+  }, [showRecCoverage]);
 
   //
   // get data on load
@@ -602,6 +606,21 @@ function SpeciesVizApp(props) {
             </>
           }
         >
+          <Source id="rec" type="geojson" data={rec}>
+            <Layer 
+              beforeId="z-0"
+              type="fill"
+              paint={{
+                'fill-color': 'rgba(0, 8, 255, 0.2)', //'#0008ff',
+                'fill-outline-color': '#0008ff',
+                'fill-opacity': showRecCoverage ? 1 : 0,
+                'fill-opacity-transition': {
+                  'duration': 200,
+                  'delay': 0,
+                },
+              }}
+            />
+          </Source>
           {layerData.map((ld, idx) => {
             return (
               <DataLayer
@@ -658,6 +677,8 @@ function SpeciesVizApp(props) {
                 dataInventory={dataInventory}
                 citations={citations}
                 onShowCitations={(codes) => setShowCitations(codes)}
+                showRecCoverage={showRecCoverage}
+                onToggleRecCoverage={(showRec) => setShowRecCoverage(showRec)}
               />
             )}
           </div>
