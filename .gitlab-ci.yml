@@ -86,9 +86,10 @@ deploy_staging_backend:
     on_stop: stop_staging_backend
   only:
     - master
+  tags:
+    - aps
   script:
-    - docker pull registry.axiom/ansible
-    - docker run --rm registry.axiom/ansible ap apps-stage atp-server --tags deploy
+    - aps apps-stage atp-server
 
 deploy_staging_frontend:
   stage: deploy
@@ -98,9 +99,10 @@ deploy_staging_frontend:
     on_stop: stop_staging_frontend
   only:
     - master
+  tags:
+    - aps
   script:
-    - docker pull registry.axiom/ansible
-    - docker run --rm registry.axiom/ansible ap apps-stage atp-site --tags deploy
+    - aps apps-stage atp-site
 
 deploy_production_backend:
   stage: deploy
@@ -109,9 +111,10 @@ deploy_production_backend:
     url: http://atp-server.srv.axds.co
   only:
     - tags
+  tags:
+    - aps
   script:
-    - docker pull registry.axiom/ansible
-    - docker run --rm registry.axiom/ansible ap apps-prod atp-server -e atp_server_version=$CI_COMMIT_REF_NAME --tags deploy
+    - aps apps-prod atp-server -e atp_server_version=$CI_COMMIT_REF_NAME
 
 deploy_production_frontend:
   stage: deploy
@@ -132,9 +135,10 @@ deploy_production_frontend:
   environment:
     name: prod-frontend
     url: https://secoora.org/fact/data-visualization-tool/
-  image: registry.axiom/ansible
+  tags:
+    - aps
   script:
-    - ap external atp-site-prod -e atp_site_local_artifact_path=/builds/axiom/fact-species-viz/dist/prod --tags deploy
+    - aps external atp-site-prod -e atp_site_local_artifact_path=/builds/axiom/fact-species-viz/dist/prod
 
 stop_staging_backend:
   stage: deploy
@@ -144,9 +148,10 @@ stop_staging_backend:
   environment:
     name: stage
     action: stop
+  tags:
+    - aps
   script:
-    - docker pull registry.axiom/ansible
-    - docker run --rm registry.axiom/ansible ap apps-stage atp-server --tags deploy -e atp_server_state=stopped
+    - aps apps-stage atp-server -e atp_server_state=stopped
 
 stop_staging_frontend:
   stage: deploy
@@ -156,9 +161,10 @@ stop_staging_frontend:
   environment:
     name: stage-frontend
     action: stop
+  tags:
+    - aps
   script:
-    - docker pull registry.axiom/ansible
-    - docker run --rm registry.axiom/ansible ap apps-stage atp-site --tags deploy -e atp_site_state=stopped
+    - aps apps-stage atp-site -e atp_site_state=stopped
 
 cleanup_staging_backend:
   stage: cleanup
