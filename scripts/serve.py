@@ -425,4 +425,4 @@ async def get_atp_data(aphia_id: int, year: Union[int, str], type: ATPType, mont
     if cv != None:
         return cv
 
-    return JSONResponse(status_code=404)
+    return JSONResponse({}, status_code=404)

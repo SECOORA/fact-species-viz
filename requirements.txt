@@ -4,12 +4,12 @@ environs
 fastapi
 geojson
 geopandas
-jinjasql
 numpy
 orjson
 pandas
 psycopg2
 pydantic
+pydantic-settings
 pyproj
 redis-py
 requests

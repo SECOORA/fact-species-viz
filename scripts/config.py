@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
 """Configuration."""
-from pydantic import BaseSettings, Field, HttpUrl, RedisDsn
+from pydantic import HttpUrl, RedisDsn
+from pydantic_settings import BaseSettings
 
 
 class Configuration(BaseSettings):
