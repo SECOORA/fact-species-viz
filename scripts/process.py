@@ -70,6 +70,49 @@ def weekly_avg(df: pd.DataFrame) -> geopandas.GeoDataFrame:
     return to_gdf(avgs)
 
 
+def daily_avg(df: pd.DataFrame) -> geopandas.GeoDataFrame:
+    """
+    For each animal, interpolate the path between detections (daily).
+    """
+    grouped_df = df.drop(columns=['weekcollected', 'monthcollected']).groupby(['fieldnumber'])
+    animal_tracks: List[pd.DataFrame] = []
+
+    for name, df_group in tqdm(grouped_df, desc="Animal Daily Position"):
+        gdf = df_group.set_index('datecollected')
+
+        assign_vals = {
+            'fieldnumber': name[0],
+            'commonname': gdf.iloc[0].at['commonname'],
+            'scientificname': gdf.iloc[0].at['scientificname'],
+            'aphiaid': gdf.iloc[0].at['aphiaid']
+        }
+
+        # resample on days, average the location of that day, drop empty days
+        gdf = gdf.resample('D').mean(numeric_only=True).dropna().assign(**assign_vals)
+
+        add_dfs = []
+
+        # concat them all into one dataframe
+        full_gdf = pd.concat([
+            gdf,
+            *add_dfs
+        ]).sort_index().rename_axis('datecollected')
+
+        animal_tracks.append(full_gdf)
+
+    full_animal_tracks = pd.concat(animal_tracks)
+
+    # restore monthlycollected for all points - the synethsized points didn't have them
+    full_animal_tracks['monthcollected'] = full_animal_tracks.index.month
+
+    # turn into a gdf
+    full_animal_daily_pos = geopandas.GeoDataFrame(full_animal_tracks, geometry=geopandas.points_from_xy(full_animal_tracks.longitude, full_animal_tracks.latitude))
+    full_animal_daily_pos.reset_index(inplace=True)
+    full_animal_daily_pos.set_index('monthcollected', inplace=True)
+
+    return full_animal_daily_pos 
+
+
 def bounding_boxes(df: pd.DataFrame) -> geopandas.GeoDataFrame:
     """
     Creates bounding boxes for each animal over a monthly timeframe.
@@ -540,6 +583,10 @@ agg_methods: Dict[str, Dict[str, Union[Callable, str]]] = {
     'weekly': {
         'callable': weekly_avg,
         'discrim': 'WEEK',
+    },
+    'daily': {
+        'callable': daily_avg,
+        'discrim': 'DAILY',
     },
     'bounding_boxes': {
         'callable': bounding_boxes,
