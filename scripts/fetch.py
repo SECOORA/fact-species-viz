@@ -395,7 +395,7 @@ def get_project_active_years_from_graphql(trackercode: str) -> List[int]:
     """
     assert CONFIG.rw_auth_token != "you_must_set"
 
-    logger.info("get_project_active_years_from_graphql: finding project id")
+    logger.debug("get_project_active_years_from_graphql: finding project id")
     query = """
     query FindProject($trackercode: String) {
         organization(id: 2563073) {
@@ -431,14 +431,17 @@ def get_project_active_years_from_graphql(trackercode: str) -> List[int]:
         rprojectname = re.compile(f"{trackercode}\\b")
         filter_projects = [p for p in all_projects if rprojectname.match(p['name'])]
         if len(filter_projects) == 1:
-            logger.info("get_project_active_years_from_graphql: multiple matching projects for project '%s', found prefix match '%s...'", trackercode, filter_projects[0]['name'][0:20])
+            logger.debug("get_project_active_years_from_graphql: multiple matching projects for project '%s', found prefix match '%s...'", trackercode, filter_projects[0]['name'][0:20])
             all_projects = filter_projects
         else:
             raise ValueError(f"Too many projects returned from graphql query ({len(all_projects)}): {','.join((p['name'] for p in all_projects))}")
+    elif len(all_projects) == 0:
+        logger.warn("get_project_active_years_from_graphql: no projects found for %s", trackercode)
+        return []
 
     project_id = all_projects[0]['id']
 
-    logger.info("get_project_active_years_from_graphql: finding folders in project %d", project_id)
+    logger.debug("get_project_active_years_from_graphql: finding folders in project %d", project_id)
 
     # new query for folders in that project
     query = """
@@ -477,7 +480,7 @@ def get_project_active_years_from_graphql(trackercode: str) -> List[int]:
 
     folder_id = folder_nodes[0]['id']
 
-    logger.info("get_project_active_years_from_graphql: finding files in folder %d", folder_id)
+    logger.debug("get_project_active_years_from_graphql: finding files in folder %d", folder_id)
 
     # new query for files in that folder
     query = """

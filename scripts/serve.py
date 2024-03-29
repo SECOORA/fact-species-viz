@@ -102,6 +102,10 @@ async def process_atp_project(project_code: str, year: int, type: ATPType, force
 
 @app.post('/atp/PROCESS_DEFAULT')
 async def process_defaults(type: Optional[ATPType]=None, limit: Optional[str] = None, force: Optional[bool] = None):
+    """
+    @ TODO: get smarter about refreshing existing projects - get last known year/month and only do that -> forward
+    """
+    # @TODO: move this into config and/or redis
     projects = [
         'AMEELT',
         'BLKTP',
@@ -155,14 +159,33 @@ async def process_defaults(type: Optional[ATPType]=None, limit: Optional[str] = 
         'SLFWI',
         'UMASSHK',
         'USNKSC',
-        'VIMCOB'
+        'VIMCOB',
+        # new approvals added june 2023 data push
+        'SABSTS',
+        'SGGAJ',
+        'FSMOV',
+        'FFC',
+        'EEMPTAG',
+        # new approvals added mar 2024 data push
+        'LWLPBCERM',
+        'FLKSHK',
+        'MANGA',
+        'FIUBULLT',
+        'GULFTT',
+        'GRNMSTAG',
+        'NOAASARI',
+        'NOAANERR',
+        'SCDNRBTP',
+        'SCDNRTIG',
+        'SCDNRBON',
+        'PECLGG',
+        'PECLRF',
+        'CZSDPF'
     ]
 
     if limit is not None:
         lprojects = limit.split(",")
         projects = [p for p in projects if p in lprojects]
-
-    years = list(range(2009, 2023))
 
     if type is not None:
         types = [
@@ -177,6 +200,9 @@ async def process_defaults(type: Optional[ATPType]=None, limit: Optional[str] = 
     ret = []
 
     for p in projects:
+        logger.debug("process_defaults: project %s getting active years", p)
+        years = get_project_active_years_from_graphql(p)
+        logger.info("process_defaults: project %s has %d years: %s", p, len(years), ",".join((str(y) for y in years)))
         for y in years:
             for t in types:
                 kwargs = {
@@ -204,8 +230,6 @@ async def process_defaults_all(type: Optional[ATPType] = None, limit_species: Op
     Should run PROCESS_DEFAULT first in order to get each project's aggregations completed, as this
     only uses completed aggregations.  Make sure it finishes all jobs first!
     """
-    years = list(range(2009, 2022))
-
     if type is not None:
         types = [
             type

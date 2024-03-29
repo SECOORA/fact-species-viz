@@ -42,10 +42,10 @@ def get_methods_for_type(dtype: ATPType) -> Tuple[str, str]:
     @TODO: maybe this should be in Config instead of hard coded to be the best?
     """
     if dtype == ATPType.range:
-        agg_method = "animal_interpolated_paths"
+        agg_method = "daily"
         summary_method = "concave_hull"
     elif dtype == ATPType.distribution:
-        agg_method = "animal_interpolated_paths"
+        agg_method = "daily"
         summary_method = "distribution_buffered"
     else:
         raise ValueError(f"Unknown type ({dtype})")
