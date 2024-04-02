@@ -15,7 +15,7 @@ import geopandas
 import orjson
 import pyvisgraph as vg
 import requests
-from shapely.geometry import asPolygon, box, LineString, MultiPoint, Point, Polygon, MultiPolygon, geo
+from shapely.geometry import shape, box, LineString, Polygon, MultiPolygon, geo
 from shapely.geometry.base import BaseGeometry
 from shapely.ops import unary_union
 from shapely_geojson import Feature, FeatureCollection
@@ -68,6 +68,49 @@ def weekly_avg(df: pd.DataFrame) -> geopandas.GeoDataFrame:
     avgs.set_index('monthcollected', inplace=True)
 
     return to_gdf(avgs)
+
+
+def daily_avg(df: pd.DataFrame) -> geopandas.GeoDataFrame:
+    """
+    For each animal, interpolate the path between detections (daily).
+    """
+    grouped_df = df.drop(columns=['weekcollected', 'monthcollected']).groupby(['fieldnumber'])
+    animal_tracks: List[pd.DataFrame] = []
+
+    for name, df_group in tqdm(grouped_df, desc="Animal Daily Position"):
+        gdf = df_group.set_index('datecollected')
+
+        assign_vals = {
+            'fieldnumber': name[0],
+            'commonname': gdf.iloc[0].at['commonname'],
+            'scientificname': gdf.iloc[0].at['scientificname'],
+            'aphiaid': gdf.iloc[0].at['aphiaid']
+        }
+
+        # resample on days, average the location of that day, drop empty days
+        gdf = gdf.resample('D').mean(numeric_only=True).dropna().assign(**assign_vals)
+
+        add_dfs = []
+
+        # concat them all into one dataframe
+        full_gdf = pd.concat([
+            gdf,
+            *add_dfs
+        ]).sort_index().rename_axis('datecollected')
+
+        animal_tracks.append(full_gdf)
+
+    full_animal_tracks = pd.concat(animal_tracks)
+
+    # restore monthlycollected for all points - the synethsized points didn't have them
+    full_animal_tracks['monthcollected'] = full_animal_tracks.index.month
+
+    # turn into a gdf
+    full_animal_daily_pos = geopandas.GeoDataFrame(full_animal_tracks, geometry=geopandas.points_from_xy(full_animal_tracks.longitude, full_animal_tracks.latitude))
+    full_animal_daily_pos.reset_index(inplace=True)
+    full_animal_daily_pos.set_index('monthcollected', inplace=True)
+
+    return full_animal_daily_pos 
 
 
 def bounding_boxes(df: pd.DataFrame) -> geopandas.GeoDataFrame:
@@ -147,20 +190,20 @@ def animal_interpolated_paths(df: pd.DataFrame, interp_method: str="visgraph", m
         gdf = df_group.set_index('datecollected')
 
         assign_vals = {
-            'fieldnumber': name,
+            'fieldnumber': name[0],
             'commonname': gdf.iloc[0].at['commonname'],
             'scientificname': gdf.iloc[0].at['scientificname'],
             'aphiaid': gdf.iloc[0].at['aphiaid']
         }
 
         # resample on days, average the location of that day, drop empty days
-        gdf = gdf.resample('D').mean().dropna().assign(**assign_vals)
+        gdf = gdf.resample('D').mean(numeric_only=True).dropna().assign(**assign_vals)
 
         # determine gaps in days
-        diffs = gdf.index.to_series().diff().astype('timedelta64[D]')    # first row is always NaT
+        diffs = gdf.index.to_series().diff().apply(lambda x: x.days)    # first row is always NaT
 
         # get all location indicies that match the days we have to fill in
-        end_idxs = [i for i, v in enumerate(diffs.between(1.0, float(max_day_gap), inclusive=False).to_list()) if v]
+        end_idxs = [i for i, v in enumerate(diffs.between(1.0, float(max_day_gap), inclusive='neither').to_list()) if v]
 
         # end idxs refers to the integer-location based index of the END of the date range
         # the beginning of the date range is the index directly before it
@@ -541,6 +584,10 @@ agg_methods: Dict[str, Dict[str, Union[Callable, str]]] = {
         'callable': weekly_avg,
         'discrim': 'WEEK',
     },
+    'daily': {
+        'callable': daily_avg,
+        'discrim': 'DAILY',
+    },
     'bounding_boxes': {
         'callable': bounding_boxes,
         'discrim': 'BOXES'
@@ -585,7 +632,7 @@ def summary_concave(gdf: geopandas.GeoDataFrame, **kwargs) -> geopandas.GeoDataF
     ), axis=0)
     hullobj = ConcaveHull(month_df_points)
     if hullobj is not None:
-        geom = asPolygon(hullobj.calculate())
+        geom = shape(hullobj.calculate())
         try:
             # if the hull is busted, intentionally trigger an error to let it do convex below
             _ = geom.area
@@ -627,7 +674,7 @@ def summary_distribution(gdf: geopandas.GeoDataFrame, bounds=None, range_low: fl
         anim_gjos: List[Feature] = []
 
         # determine gaps in days
-        full_diffs = full_gdf.index.to_series().diff().astype('timedelta64[D]')
+        full_diffs = full_gdf.index.to_series().diff().apply(lambda x: x.days)    # first row is always NaT
         full_ilocs = [i for i, v in enumerate((full_diffs > 1.0).to_list()) if v]
 
         # full_diffs contains indicies where new lines (or points, if length 1) should start.  it's a boundary of a slice.
@@ -778,6 +825,18 @@ summary_methods = {
     }
 }
 
+
+class NpEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super(NpEncoder, self).default(obj)
+
+
 @click.command()
 @click.argument('trackercode')
 @click.argument('year')
@@ -806,10 +865,10 @@ def do_process(trackercode: str, year: str, agg_method: str, summary_method: str
         force=force
     ):
         if to_disk:
-            fname = Path('out2') / Path("-".join((v for k, v in d['_metadata'].items())) + ".geojson")
+            fname = Path('out2') / Path("-".join((str(v)[0:4] for k, v in d['_metadata'].items())) + ".geojson")
             print(fname)
             with open(fname, 'w') as f:
-                json.dump(d, f)
+                json.dump(d, f, cls=NpEncoder)
         else:
             print(d)
 
@@ -1063,6 +1122,8 @@ def load_df(trackercode: str, year: str, trim: bool=True, jitter: Optional[float
     df = pd.read_csv(p,
         **kwargs
     )
+    df['datecollected'] = pd.to_datetime(df['datecollected'], format='mixed')
+    # @TODO: datelastmodified?
     df['weekcollected'] = df['datecollected'].dt.isocalendar().week
 
     if round_decimals:

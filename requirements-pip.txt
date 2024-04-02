@@ -1,3 +1,4 @@
 pyvisgraph
 shapely-geojson
 flower>=1.0.0
+jinjasql2

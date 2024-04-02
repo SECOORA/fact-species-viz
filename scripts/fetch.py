@@ -157,11 +157,11 @@ def get_species_for_df(df: pd.DataFrame, catalog_col: str='relatedcatalogitem', 
 
     # merge species info with detections
     merged_df = pd.merge(df, species_df, left_on=catalog_col, right_on='catalognumber',
-                         **merge_kwargs).drop(columns=[catalog_col, 'catalognumber'])
+                         **merge_kwargs)
     return merged_df
 
 
-def get_from_graphql(trackercode: str, year: str, path: str):
+def get_from_graphql(trackercode: str, year: str, path: str, subset_fields: bool = True):
     assert CONFIG.rw_auth_token != "you_must_set"
 
     # query = """
@@ -312,7 +312,7 @@ def get_from_graphql(trackercode: str, year: str, path: str):
     if r.status_code != 200:
         raise ValueError(f"get_from_graphql returned error ({r.status_code}):\n {pformat(r.text)}")
 
-    nodes = [n for n in r.json()['data']['folder']['files']['nodes'] if n['deleted'] == None and n['name'].endswith('.zip')]
+    nodes = [n for n in r.json()['data']['folder']['files']['nodes'] if n['deleted'] == None and n['name'].endswith('.zip') and "external_partners" not in n['name']]
     if len(nodes) > 1:
         raise ValueError(f"Too many files returned from graphql query ({len(nodes)}): {','.join((n['name'] for n in nodes))}")
 
@@ -348,11 +348,14 @@ def get_from_graphql(trackercode: str, year: str, path: str):
     logger.info("get_from_graphql: clipping finished, length after %d (-%d)", len_after, len_before - len_after)
 
     # cleanup dataframe
-    df = df.rename(
-        columns={
-            'tagname': 'fieldnumber'
-        }
-    )
+    # not sure of historical reason to rename tagname to fieldnumber, but it messes with remora's QC, so we'll duplicate
+    # the column instead.
+    # df = df.rename(
+    #     columns={
+    #         'tagname': 'fieldnumber'
+    #     }
+    # )
+    df['fieldnumber'] = df['tagname']
 
     len_before = len(df)
     logger.info("get_from_graphql: filtering out NaN catalognumber records, length before %d", len_before)
@@ -369,17 +372,19 @@ def get_from_graphql(trackercode: str, year: str, path: str):
     df = df[df['yearcollected'] == int(year)]
 
     # subset to needed columns
-    df = df[
-        ['fieldnumber',
-        'latitude',
-        'longitude',
-        'datecollected',
-        'monthcollected',
-        'scientificname',
-        'commonname',
-        'aphiaid']
-    ]
+    if subset_fields:
+        df = df[
+            ['fieldnumber',
+            'latitude',
+            'longitude',
+            'datecollected',
+            'monthcollected',
+            'scientificname',
+            'commonname',
+            'aphiaid']
+        ]
     df.to_csv(path)
+    logger.info("get_from_graphql: wrote %s", str(path))
 
     return df
 
@@ -390,7 +395,7 @@ def get_project_active_years_from_graphql(trackercode: str) -> List[int]:
     """
     assert CONFIG.rw_auth_token != "you_must_set"
 
-    logger.info("get_project_active_years_from_graphql: finding project id")
+    logger.debug("get_project_active_years_from_graphql: finding project id")
     query = """
     query FindProject($trackercode: String) {
         organization(id: 2563073) {
@@ -426,14 +431,17 @@ def get_project_active_years_from_graphql(trackercode: str) -> List[int]:
         rprojectname = re.compile(f"{trackercode}\\b")
         filter_projects = [p for p in all_projects if rprojectname.match(p['name'])]
         if len(filter_projects) == 1:
-            logger.info("get_project_active_years_from_graphql: multiple matching projects for project '%s', found prefix match '%s...'", trackercode, filter_projects[0]['name'][0:20])
+            logger.debug("get_project_active_years_from_graphql: multiple matching projects for project '%s', found prefix match '%s...'", trackercode, filter_projects[0]['name'][0:20])
             all_projects = filter_projects
         else:
             raise ValueError(f"Too many projects returned from graphql query ({len(all_projects)}): {','.join((p['name'] for p in all_projects))}")
+    elif len(all_projects) == 0:
+        logger.warn("get_project_active_years_from_graphql: no projects found for %s", trackercode)
+        return []
 
     project_id = all_projects[0]['id']
 
-    logger.info("get_project_active_years_from_graphql: finding folders in project %d", project_id)
+    logger.debug("get_project_active_years_from_graphql: finding folders in project %d", project_id)
 
     # new query for folders in that project
     query = """
@@ -472,7 +480,7 @@ def get_project_active_years_from_graphql(trackercode: str) -> List[int]:
 
     folder_id = folder_nodes[0]['id']
 
-    logger.info("get_project_active_years_from_graphql: finding files in folder %d", folder_id)
+    logger.debug("get_project_active_years_from_graphql: finding files in folder %d", folder_id)
 
     # new query for files in that folder
     query = """
@@ -549,8 +557,26 @@ def combine_projects(trackercode: str):
     all_df.to_csv(f"data/{trackercode}.csv")
 
 
+@click.command()
+@click.argument('trackercode')
+def get_active_years(trackercode: str):
+    years = get_project_active_years_from_graphql(trackercode)
+    print(", ".join((str(x) for x in sorted(years))))
+
+
+@click.command()
+@click.argument('trackercode')
+@click.argument('year')
+@click.option("-o", "--output-path", default=None)
+def get_detect_csv(trackercode: str, year: int, output_path: Optional[Path]):
+    #str("tmp/BLKTP_2018.csv")
+    get_from_graphql(trackercode=trackercode, year=year, path=output_path, subset_fields=False)
+
+
 cli.add_command(do_get_all_tables)
 cli.add_command(combine_projects)
+cli.add_command(get_active_years)
+cli.add_command(get_detect_csv)
 
 
 if __name__ == "__main__":

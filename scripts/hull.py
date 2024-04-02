@@ -1,8 +1,6 @@
 import numpy as np
 import math
-from shapely.geometry import asPoint
-from shapely.geometry import asLineString
-from shapely.geometry import asPolygon
+from shapely.geometry import shape
 from shapely.ops import transform
 from functools import partial
 import pyproj
@@ -176,7 +174,7 @@ class ConcaveHull:
                 next_point = np.reshape(self.data_set[knn[candidate]], (1, 2))
                 test_hull = np.append(hull, next_point, axis=0)
 
-                line = asLineString(test_hull)
+                line = shape(test_hull)
                 invalid_hull = not line.is_simple
                 i += 1
 
@@ -192,12 +190,12 @@ class ConcaveHull:
             self.indices[current_point] = False
             step += 1
 
-        poly = asPolygon(hull)
+        poly = shape(hull)
 
         count = 0
         total = self.data_set.shape[0]
         for ix in range(total):
-            pt = asPoint(self.data_set[ix, :])
+            pt = shape(self.data_set[ix, :])
             if poly.intersects(pt) or pt.within(poly):
                 count += 1
             else:
