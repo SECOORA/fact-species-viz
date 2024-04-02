@@ -513,8 +513,14 @@ def get_project_active_years_from_graphql(trackercode: str) -> List[int]:
 
     nodes = [n['name'] for n in r.json()['data']['folder']['files']['nodes'] if n['deleted'] == None and 'matched_detections' in n['name'] and n['name'].endswith('.zip')]
     
-    # strip .zip off right, find last _, extract, convert to int
-    years = [int(n[n.rindex('_')+1:-4]) for n in nodes]
+    # strip .zip off right, find last _, extract, convert to int (if able)
+    def tryint(n: str) -> Optional[int]:
+        try:
+            return int(n[n.rindex('_')+1:-4]) 
+        except ValueError:
+            return None
+
+    years = [nn for nn in (tryint(n) for n in nodes) if nn is not None]
     return sorted(years)
 
 
