@@ -8,6 +8,7 @@ build_staging_backend:
   stage: build
   only:
     - master
+    - branches
   script:
     - docker build -t registry.axiom/atp-server:latest -f Dockerfile.backend .
 
@@ -15,6 +16,7 @@ build_staging_frontend:
   stage: build
   only:
     - master
+    - branches
   script:
     - docker build -t registry.axiom/atp-site:latest --build-arg MAPBOX_TOKEN=$MAPBOX_TOKEN --build-arg DATA_URL=https://stage-atp-server.srv.axds.co .
 
