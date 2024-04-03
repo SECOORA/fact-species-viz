@@ -34,6 +34,8 @@ from .fetch import get_all_tables, get_from_graphql
 from .config import CONFIG
 from .utils import lock
 from .cache import r
+from .log import logger
+
 
 # transform functions
 def raw(df: pd.DataFrame) -> geopandas.GeoDataFrame:
@@ -1218,22 +1220,33 @@ def get_project_metadata(project_code: str, force: bool=False) -> Dict:
     if saved.exists() and not force:
         with saved.open() as f:
             data = json.load(f)
-    else:
-        r = requests.get("https://members.oceantrack.org/geoserver/otn/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=otn:otn_resources_metadata&outputFormat=application%2Fjson&CQL_FILTER=seriescode%20=%20%27FACT%27")
-        r.raise_for_status()
+        if project_code not in data:
+            logger.warn("get_project_metadata: %s not in cached metadata", project_code)
+        else:
+            return data[project_code]
 
+    logger.info("get_project_metadata: retrieving metadata from OTN geoserver")
+    r = requests.get("https://members.oceantrack.org/geoserver/otn/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=otn:otn_resources_metadata&outputFormat=application%2Fjson&CQL_FILTER=seriescode%20=%20%27FACT%27")
+    r.raise_for_status()
+
+    try:
         raw_data = r.json()
+    except requests.exceptions.InvalidJSONError:
+        logger.warn("get_project_metadata: could not get valid geoserver response, data will be missing")
+        return {}
 
-        data = {
-            f['properties']['collectioncode'][5:]: {
-                'shortname': f['properties']['shortname'],
-                'citation': f['properties']['citation'],
-                'website': f['properties']['website']
-            } for f in raw_data['features']
-        }
+    data = {
+        f['properties']['collectioncode'][5:]: {
+            'shortname': f['properties']['shortname'],
+            'citation': f['properties']['citation'],
+            'website': f['properties']['website']
+        } for f in raw_data['features']
+    }
 
-        with saved.open('w') as f:
-            json.dump(data, f)
+    with saved.open('w') as f:
+        json.dump(data, f)
+
+    logger.info("get_project_metadata: cached metadata at %s", saved)
 
     return data.get(project_code, {})
 

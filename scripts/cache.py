@@ -269,9 +269,9 @@ def cache_results(results: Sequence[Dict[str, Any]], dtype: ATPType) -> Set:
         if d['_metadata']['project_code'] != '_ALL':
             update_citations(
                 d['_metadata']['project_code'],
-                d['_metadata']['shortname'],
-                d['_metadata']['citation'],
-                d['_metadata']['website']
+                d['_metadata'].get('shortname', d['_metadata']['project_code']),
+                d['_metadata'].get('citation', "Missing project citation"),
+                d['_metadata'].get('website', "")
             )
 
         del d['_metadata']
