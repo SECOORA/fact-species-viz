@@ -677,7 +677,7 @@ def summary_distribution(gdf: geopandas.GeoDataFrame, bounds=None, range_low: fl
 
         # determine gaps in days
         full_diffs = full_gdf.index.to_series().diff().apply(lambda x: x.days)    # first row is always NaT
-        full_ilocs = [i for i, v in enumerate((full_diffs > 1.0).to_list()) if v]
+        full_ilocs = [i for i, v in enumerate((full_diffs > 0.0).to_list()) if v]
 
         # full_diffs contains indicies where new lines (or points, if length 1) should start.  it's a boundary of a slice.
         cur_iloc = 0
