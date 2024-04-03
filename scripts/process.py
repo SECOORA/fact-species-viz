@@ -15,7 +15,7 @@ import geopandas
 import orjson
 import pyvisgraph as vg
 import requests
-from shapely.geometry import shape, box, LineString, Polygon, MultiPolygon, geo
+from shapely.geometry import box, LineString, Polygon, MultiPolygon, geo
 from shapely.geometry.base import BaseGeometry
 from shapely.ops import unary_union
 from shapely_geojson import Feature, FeatureCollection
@@ -624,7 +624,7 @@ def summary_convex(gdf: geopandas.GeoDataFrame, **kwargs) -> geopandas.GeoDataFr
     return hull
 
 def summary_concave(gdf: geopandas.GeoDataFrame, **kwargs) -> geopandas.GeoDataFrame:
-    print("Calculating concave hull", file=sys.stderr)
+    logger.info("Calculating concave hull")
     month_df_points = np.unique(np.stack(
         (
             gdf['longitude'].to_numpy(),
@@ -634,21 +634,27 @@ def summary_concave(gdf: geopandas.GeoDataFrame, **kwargs) -> geopandas.GeoDataF
     ), axis=0)
     hullobj = ConcaveHull(month_df_points)
     if hullobj is not None:
-        geom = shape(hullobj.calculate())
         try:
-            # if the hull is busted, intentionally trigger an error to let it do convex below
-            _ = geom.area
-            buffered_geom = hullobj.buffer_in_meters(geom, 1000)
-            feat = buffer_union(Feature(
-                smooth_polygon(buffered_geom),
-                {'level': 1}
-            ))
-            return geopandas.GeoDataFrame.from_features([feat])
+            hull = hullobj.calculate()
+            # no concave? let it fall through to convex
+            if hull is not None:
+                geom = Polygon(hull)
+
+                # if the hull is busted, intentionally trigger an error to let it do convex below
+                _ = geom.area
+                buffered_geom = hullobj.buffer_in_meters(geom, 1000)
+                feat = buffer_union(Feature(
+                    smooth_polygon(buffered_geom),
+                    {'level': 1}
+                ))
+                return geopandas.GeoDataFrame.from_features([feat])
+        except AttributeError as e:
+            logger.warning("summary_concave: ConcaveHull broke: %s", str(e))
         except TypeError:
             pass
 
     # couldn't do concave? convex is close.
-    print("WARN: could not do concave hull, returning convex", file=sys.stderr)
+    logger.warning("summary_concave: could not calculate concave hull, returning convex")
     return summary_convex(gdf)
 
 def summary_bbox(gdf: geopandas.GeoDataFrame, **kwargs) -> BaseGeometry:
