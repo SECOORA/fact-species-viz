@@ -1,6 +1,6 @@
 import numpy as np
 import math
-from shapely.geometry import shape
+from shapely.geometry import Point, LineString, Polygon
 from shapely.ops import transform
 from functools import partial
 import pyproj
@@ -140,7 +140,7 @@ class ConcaveHull:
         current_point = first_point
 
         # Note that hull and test_hull are matrices (N, 2)
-        hull = np.reshape(np.array(self.data_set[first_point, :]), (1, 2))
+        hull = np.array(Point(self.data_set[first_point, :]))
         test_hull = hull
 
         # Remove the first point
@@ -171,10 +171,10 @@ class ConcaveHull:
                 candidate = candidates[i]
 
                 # Create a test hull to check if there are any self-intersections
-                next_point = np.reshape(self.data_set[knn[candidate]], (1, 2))
-                test_hull = np.append(hull, next_point, axis=0)
+                next_point = np.array(Point(self.data_set[knn[candidate]]))
+                test_hull = np.append(hull, next_point)
 
-                line = shape(test_hull)
+                line = LineString(test_hull)
                 invalid_hull = not line.is_simple
                 i += 1
 
@@ -190,12 +190,12 @@ class ConcaveHull:
             self.indices[current_point] = False
             step += 1
 
-        poly = shape(hull)
+        poly = Polygon(hull)
 
         count = 0
         total = self.data_set.shape[0]
         for ix in range(total):
-            pt = shape(self.data_set[ix, :])
+            pt = Point(self.data_set[ix, :])
             if poly.intersects(pt) or pt.within(poly):
                 count += 1
             else:
