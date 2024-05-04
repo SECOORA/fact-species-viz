@@ -1,8 +1,14 @@
 stages:
+  - cidebug
   - build
   - push
   - deploy
   - cleanup
+
+debug_ci:
+  stage: cidebug
+  script:
+    - sleep infinity
 
 build_staging_backend:
   stage: build
