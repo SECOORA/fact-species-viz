@@ -140,7 +140,7 @@ deploy_production_frontend:
   tags:
     - aps
   script:
-    - aps external atp-site-prod -e atp_site_local_artifact_path=/builds/axiom/fact-species-viz/dist/prod
+    - aps external atp-site-prod -e atp_site_local_artifact_path=$CI_BUILDS_DIR/$CI_PROJECT_PATH/dist/prod
 
 stop_staging_backend:
   stage: deploy
