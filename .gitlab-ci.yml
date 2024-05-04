@@ -1,14 +1,8 @@
 stages:
-  - cidebug
   - build
   - push
   - deploy
   - cleanup
-
-debug_ci:
-  stage: cidebug
-  script:
-    - sleep infinity
 
 build_staging_backend:
   stage: build
@@ -146,7 +140,7 @@ deploy_production_frontend:
   tags:
     - aps
   script:
-    - aps external atp-site-prod -e atp_site_local_artifact_path=$CI_BUILDS_DIR/$CI_PROJECT_PATH/dist/prod
+    - aps external atp-site-prod -e atp_site_local_artifact_path=$CI_PROJECT_DIR/dist/prod
 
 stop_staging_backend:
   stage: deploy
