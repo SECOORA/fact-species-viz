@@ -669,7 +669,7 @@ function SpeciesVizApp(props) {
                 );
               })}
           </div>
-          <div style={{height: "670px"}}>
+          <div style={{height: "670px", overflow: "hidden"}}>
             {!readOnly && (
               <LayerEditor
                 notifyUpdate={onLayerUpdate}
