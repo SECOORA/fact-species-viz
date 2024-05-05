@@ -365,7 +365,9 @@ const LayerEditor = (props) => {
           }}
           onClick={() => _updateLayer({ type: "distribution" })}
         >
-          <div className="tw-flex tw-leading-5 tw-items-center">
+          <div className="tw-flex tw-items-center" style={{
+            lineHeight: "12.5px",
+          }}>
             Distribution within the network
           </div>
         </button>
@@ -384,7 +386,9 @@ const LayerEditor = (props) => {
           }}
           onClick={() => _updateLayer({ type: "range" })}
         >
-          <div className="tw-flex tw-leading-5 tw-items-center">Range within the network</div>
+          <div className="tw-flex tw-items-center" style={{
+            lineHeight: "12.5px",
+          }}>Range within the network</div>
         </button>
       </div>
 
@@ -509,7 +513,7 @@ const LayerEditor = (props) => {
 
       <div>
         <Slub extraClasses={"tw-flex"}>
-          Citations
+          Citations ({speciesProjects.slice(1).length})
           <IconZoom
             onClick={() => props.onShowCitations(speciesProjects.slice(1))}
             size={4}

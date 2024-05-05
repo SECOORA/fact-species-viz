@@ -669,7 +669,7 @@ function SpeciesVizApp(props) {
                 );
               })}
           </div>
-          <div className="tw-h-full">
+          <div style={{height: "670px"}}>
             {!readOnly && (
               <LayerEditor
                 notifyUpdate={onLayerUpdate}
