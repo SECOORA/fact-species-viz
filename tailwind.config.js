@@ -69,6 +69,13 @@ module.exports = {
       '72': '18em',
       '80': '20em',
       '96': '24em',
+    },
+    borderRadius: {
+      'none': '0',
+      'sm': '1.25px',
+      DEFAULT: '5px',
+      'lg': '10px',
+      'full': '9999px',
     }
   },
   variants: {
