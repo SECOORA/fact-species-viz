@@ -24,7 +24,7 @@ import {
   IconImage,
 } from "./icon.js";
 import SpeciesImage from "./speciesImage.js";
-import rec from "./assets/rec.geojson";
+import RecMap from "./recMap.js";
 
 const getRandomItem = (iterable) => iterable[Math.floor(Math.random() * iterable.length)]
 
@@ -606,7 +606,7 @@ function SpeciesVizApp(props) {
             </>
           }
         >
-          <Source id="rec" type="geojson" data={rec}>
+          <Source id="rec" type="geojson" data={RecMap}>
             <Layer 
               beforeId="z-0"
               type="fill"
