@@ -1,4 +1,7 @@
 FROM node:12.13 AS build
+LABEL org.opencontainers.image.authors="Developer <dev@axiomdatascience.com>"
+LABEL org.opencontainers.image.licenses="MIT"
+
 RUN mkdir /tmp/build
 WORKDIR /tmp/build
 

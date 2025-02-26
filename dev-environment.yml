@@ -1,0 +1,13 @@
+name: fact-species-viz
+channels:
+  - conda-forge
+dependencies:
+  - pytest
+  - pytest-cov
+  - isort
+  - flake8
+  - black
+  - pre-commit
+  - types-setuptools
+  - mypy
+  - bump2version
