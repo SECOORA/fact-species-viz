@@ -3,6 +3,7 @@ from typing import List, Optional, Union
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from scripts.config import ALLOWED_PROJECTS
 from scripts.fetch import get_project_active_years_from_graphql
 
 from . import tasks
@@ -19,6 +20,13 @@ app.add_middleware(
     allow_methods=['*'],
     allow_headers=['*']
 )
+
+
+def check_project_code(project_code: str):
+    """Raise ERR 403 if project code is not configured as allowed."""
+    if project_code not in ALLOWED_PROJECTS:
+        raise HTTPException(status_code=403, detail="Project code not allowed")
+
 
 @app.post('/atp/process_all/{species_aphia_id}/{type}')
 async def process_atp_all(species_aphia_id: int, type: ATPType, year: Optional[int]=None, project_code: Optional[str]=None):
@@ -67,6 +75,8 @@ async def process_atp_all(species_aphia_id: int, type: ATPType, year: Optional[i
 
 @app.post('/atp/{project_code}/{type}/{year}')
 async def process_atp_project(project_code: str, year: int, type: ATPType, force: Optional[bool]=None):
+    check_project_code(project_code)
+
     kwargs = {
         'project_code': project_code,
         'year': year,
@@ -105,83 +115,7 @@ async def process_defaults(type: Optional[ATPType]=None, limit: Optional[str] = 
     """
     @ TODO: get smarter about refreshing existing projects - get last known year/month and only do that -> forward
     """
-    # @TODO: move this into config and/or redis
-    projects = [
-        'AMEELT',
-        'BLKTP',
-        'CGJACK',
-        'FBLTP',
-        'GADNRTT',
-        'TQCS',
-        'WPAJ',
-        'WPCUB',
-        'WPKINGM',
-        'WPTTT',
-        'COBCRP',
-        'FLKEYST',
-        'CZSBUL',
-        'DTNSST',
-        'ECBMIT',
-        'ECBNEAR',
-        'FSUGG',
-        'GADNRMISC',
-        'GADNRRD',
-        'MULUCF',
-        'NOAACONCH',
-        'SCSOFL',
-        'SRFCE',
-        'TQCSPP',
-        'TQLMB',
-        'UGAACI',
-        'V2LUMI',
-        'V2LURB',
-        'SSUEEL',
-        'TBHOG',
-        'KSCETM',
-        'MMFT',
-        # new approvals added nov 2022 data push
-        'ABCOWN',
-        'APFISH',
-        'COBGOM',
-        'COBREPRO',
-        'FIUARBT',
-        'FNEMO',
-        'FSCAPE',
-        'GGINEC',
-        'GGINWC',
-        'HBSERC',
-        'JBIM',
-        'JUKSC',
-        'MBSHHN',
-        'MMFSTS',
-        'NCCOBIA',
-        'RSTSNCT',
-        'SLFWI',
-        'UMASSHK',
-        'USNKSC',
-        'VIMCOB',
-        # new approvals added june 2023 data push
-        'SABSTS',
-        'SGGAJ',
-        'FSMOV',
-        'FFC',
-        'EEMPTAG',
-        # new approvals added mar 2024 data push
-        'LWLPBCERM',
-        'FLKSHK',
-        'MANGA',
-        'FIUBULLT',
-        'GULFTT',
-        'GRNMSTAG',
-        'NOAASARI',
-        'NOAANERR',
-        'SCDNRBTP',
-        'SCDNRTIG',
-        'SCDNRBON',
-        'PECLGG',
-        'PECLRF',
-        'CZSDPF'
-    ]
+    projects = ALLOWED_PROJECTS
 
     if limit is not None:
         lprojects = limit.split(",")
@@ -297,6 +231,8 @@ async def process_atp_project_all_years(project_code: str, type: Optional[ATPTyp
 
     Active years are determined by a RW graphql query.
     """
+    check_project_code(project_code)
+
     years = get_project_active_years_from_graphql(project_code)
     if type is not None:
         types = [
